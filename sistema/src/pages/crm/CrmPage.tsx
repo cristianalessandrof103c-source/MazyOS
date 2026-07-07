@@ -6,6 +6,7 @@ import { useAuth } from '../../contexts/AuthContext'
 import { NewLeadDialog } from './NewLeadDialog'
 import { CloseDealDialog } from './CloseDealDialog'
 import { LeadCard } from './LeadCard'
+import { ConversationDialog } from './ConversationDialog'
 import type { AcquisitionChannel, Lead, PipelineStage } from '../../lib/crm-types'
 
 export function CrmPage() {
@@ -13,6 +14,7 @@ export function CrmPage() {
   const { signOut } = useAuth()
   const [showNewLead, setShowNewLead] = useState(false)
   const [dealLead, setDealLead] = useState<Lead | null>(null)
+  const [conversationLead, setConversationLead] = useState<Lead | null>(null)
 
   const stagesQuery = useQuery({
     queryKey: ['pipeline-stages', tenantId],
@@ -114,6 +116,7 @@ export function CrmPage() {
                         stages={stages}
                         channel={channels.find((c) => c.id === lead.acquisition_channel_id)}
                         onRegisterSale={() => setDealLead(lead)}
+                        onOpenConversation={() => setConversationLead(lead)}
                       />
                     ))}
                     {stageLeads.length === 0 && (
@@ -145,6 +148,15 @@ export function CrmPage() {
           wonStage={wonStage}
           lostStage={lostStage}
           onClose={() => setDealLead(null)}
+        />
+      )}
+
+      {conversationLead && (
+        <ConversationDialog
+          tenantId={tenantId}
+          leadId={conversationLead.id}
+          leadName={conversationLead.full_name}
+          onClose={() => setConversationLead(null)}
         />
       )}
     </div>

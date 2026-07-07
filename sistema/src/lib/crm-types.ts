@@ -37,3 +37,25 @@ export type Deal = {
   closed_at: string | null
   created_at: string
 }
+
+export type Conversation = {
+  id: string
+  tenant_id: string
+  lead_id: string
+  channel: 'whatsapp'
+  status: 'active' | 'needs_human' | 'closed'
+  window_expires_at: string | null
+  last_message_at: string
+  created_at: string
+}
+
+export type Message = {
+  id: string
+  tenant_id: string
+  conversation_id: string
+  direction: 'inbound' | 'outbound'
+  sender_type: 'lead' | 'agent' | 'human'
+  content_text: string
+  tool_calls: { name: string; input: unknown }[] | null
+  created_at: string
+}

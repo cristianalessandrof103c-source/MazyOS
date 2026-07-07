@@ -8,12 +8,14 @@ export function LeadCard({
   stages,
   channel,
   onRegisterSale,
+  onOpenConversation,
 }: {
   tenantId: string
   lead: Lead
   stages: PipelineStage[]
   channel: AcquisitionChannel | undefined
   onRegisterSale: () => void
+  onOpenConversation: () => void
 }) {
   const queryClient = useQueryClient()
   const currentStage = stages.find((s) => s.id === lead.stage_id)
@@ -57,6 +59,13 @@ export function LeadCard({
           </button>
         )}
       </div>
+
+      <button
+        onClick={onOpenConversation}
+        className="mt-2 text-xs text-text-faint hover:text-text-dim"
+      >
+        Ver conversa
+      </button>
     </li>
   )
 }
