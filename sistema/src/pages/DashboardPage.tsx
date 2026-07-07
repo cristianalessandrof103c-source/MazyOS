@@ -30,9 +30,14 @@ export function DashboardPage() {
         <div className="flex items-center gap-4 text-sm text-text-dim">
           <span>{user?.email}</span>
           {isPlatformAdmin && (
-            <span className="rounded-full bg-violet/15 px-2 py-0.5 text-xs text-violet">
-              super admin
-            </span>
+            <>
+              <span className="rounded-full bg-violet/15 px-2 py-0.5 text-xs text-violet">
+                super admin
+              </span>
+              <Link to="/cerebro" className="hover:text-text">
+                Cérebro
+              </Link>
+            </>
           )}
           <button onClick={() => signOut()} className="text-text-dim hover:text-text">
             Sair

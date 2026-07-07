@@ -4,6 +4,7 @@ import { LoginPage } from './pages/LoginPage'
 import { DashboardPage } from './pages/DashboardPage'
 import { CrmPage } from './pages/crm/CrmPage'
 import { FinanceiroPage } from './pages/financeiro/FinanceiroPage'
+import { CerebroPage } from './pages/cerebro/CerebroPage'
 
 function App() {
   return (
@@ -30,6 +31,14 @@ function App() {
         element={
           <ProtectedRoute>
             <FinanceiroPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/cerebro"
+        element={
+          <ProtectedRoute>
+            <CerebroPage />
           </ProtectedRoute>
         }
       />

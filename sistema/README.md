@@ -149,6 +149,48 @@ conversa (não precisa de acesso a log do Supabase pra depurar).
   no mesmo instante em que o follow-up conta, 24h desde a última mensagem do lead). Funciona bem
   pra pós-venda se a venda for registrada logo após a última mensagem.
 
+## Fase 4 — cérebro coletivo / RAG (pronto)
+
+Base de conhecimento **compartilhada entre todos os tenants** (decisão do dono) — aprendizado de
+padrões de venda que melhora com cada conversa, de qualquer cliente da plataforma.
+
+- `supabase/migrations/0007_cerebro_coletivo.sql` — extensão `pgvector`, `knowledge_base_insights`
+  (`scope='platform'`, sem `tenant_id` de propósito, índice `hnsw` sobre `embedding vector(512)`),
+  `conversation_outcomes` (1 linha por conversa processada, evita reprocessar) e a função
+  `match_insights(query_embedding, match_count)` (busca por similaridade de cosseno, só
+  `status='approved'`).
+- `supabase/functions/_shared/embeddings.ts` — embeddings via **Voyage AI** (`voyage-3-lite`,
+  512 dim — parceiro recomendado pela Anthropic; trocar de provedor só muda esse arquivo).
+- `supabase/functions/extract-insights/` — ao fim de uma conversa (venda ganha/perdida, disparado
+  direto pelas tools `registrar_venda`/`marcar_conversa_perdida` em `whatsapp-webhook/agent.ts`;
+  ou por timeout, scan diário via `pg_cron` pra conversas paradas há +7 dias sem outcome) lê a
+  transcrição, chama Claude (tool use forçado) pra extrair 0-N insights genéricos — **sem dado que
+  identifique o lead** — grava como `status='draft'`, gera o embedding de cada um, e registra o
+  desfecho em `conversation_outcomes`.
+- `whatsapp-webhook/agent.ts` — antes de cada resposta, embeda a mensagem do lead e busca os 5
+  insights aprovados mais parecidos via `match_insights`, injeta no system prompt como "Conhecimento
+  coletivo". Se a busca falhar (sem `VOYAGE_API_KEY` configurada, por exemplo), o agente segue sem
+  esse contexto — retrieval é reforço, não dependência dura pra Fase 2 continuar funcionando.
+- Página `/cerebro` (link "Cérebro" no header do dashboard, só visível pra `super admin`): abas
+  Rascunhos/Aprovados/Arquivados, aprovar ou arquivar cada insight. Só insight aprovado entra no
+  retrieval — proteção contra contaminar a base pra todos os tenants com inferência ruim.
+- **Testado estruturalmente** (sem depender de chave nova): inseri um insight com embedding
+  simulado via SQL, confirmei que `match_insights` ignora rascunho e retorna depois de aprovado
+  (similaridade 1.0 pro próprio vetor), e testei o fluxo de aprovação inteiro pela UI (botão
+  Aprovar → banco atualiza `status`/`reviewed_by`/`reviewed_at` → aparece na aba Aprovados).
+  Dados de teste removidos depois.
+
+### Pendente
+
+- **Chave da Voyage AI** ([voyageai.com](https://voyageai.com)) — sem ela, `extract-insights` ainda
+  roda (extrai e salva o rascunho) mas sem embedding, e o retrieval do agente não encontra nada
+  pra buscar. Setar com `npx supabase secrets set VOYAGE_API_KEY=...` dentro de `sistema/`.
+- Crédito na Anthropic e token permanente do WhatsApp (mesmos bloqueios das Fases 2/3, decisão do
+  dono de deixar pro final) — sem eles, `extract-insights` não consegue chamar o Claude pra
+  extrair de verdade, e o agente não consegue responder no WhatsApp real.
+- **Dedup semanal de insights parecidos** (mencionado no plano) — não implementado ainda; com o
+  volume atual de conversas isso não é urgente, mas fica registrado pra quando o cérebro crescer.
+
 ## Rodando localmente
 
 ```bash
@@ -159,5 +201,6 @@ npm run dev
 ## Próximas fases
 
 Ver roadmap completo no plano. Em ordem: CRM manual (pronto) → WhatsApp sandbox + agente de IA
-(pronto, aguardando crédito) → follow-up + dashboard financeiro (pronto) → cérebro coletivo (RAG)
-→ hub de integrações do MazyOS → corte pro WhatsApp real → white-label multi-tenant completo.
+(pronto, aguardando crédito) → follow-up + dashboard financeiro (pronto) → cérebro coletivo/RAG
+(pronto, aguardando chave da Voyage) → hub de integrações do MazyOS → corte pro WhatsApp real →
+white-label multi-tenant completo.

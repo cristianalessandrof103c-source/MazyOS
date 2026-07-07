@@ -3,6 +3,25 @@
 // Cada tool executa contra o CRM usando tenantId/leadId/conversationId já
 // resolvidos em index.ts a partir do phone_number_id do webhook, nunca a
 // partir do input do model (mesmo espírito de "tenant_id nunca cru" do plano).
+//
+// Fase 4: antes de chamar o Claude, busca no cérebro coletivo (RAG,
+// knowledge_base_insights) os insights aprovados mais parecidos com a
+// mensagem atual, e injeta no system prompt. Se a busca falhar (sem
+// VOYAGE_API_KEY configurada ainda, por exemplo), o agente segue sem esse
+// contexto — retrieval é um reforço, não uma dependência dura.
+
+import { embedText } from '../_shared/embeddings.ts'
+
+const EXTRACT_INSIGHTS_URL = 'https://tblumyuozhysncscktrk.supabase.co/functions/v1/extract-insights'
+const DISPATCHER_SECRET = Deno.env.get('DISPATCHER_SECRET') ?? ''
+
+function dispararExtracaoInsights(conversationId: string, outcome: 'won' | 'lost') {
+  fetch(EXTRACT_INSIGHTS_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'x-dispatcher-secret': DISPATCHER_SECRET },
+    body: JSON.stringify({ conversationId, outcome }),
+  }).catch((err) => console.error('Erro disparando extract-insights:', err))
+}
 
 const ALL_TOOLS = [
   {
@@ -116,9 +135,25 @@ export async function runAgentLoop(args: RunAgentLoopArgs) {
   const enabledNames = agentConfig?.tools_enabled ?? ALL_TOOLS.map((t) => t.name)
   const tools = ALL_TOOLS.filter((t) => enabledNames.includes(t.name))
 
-  const systemPrompt = agentConfig?.system_prompt_override?.trim()
+  let basePrompt = agentConfig?.system_prompt_override?.trim()
     ? `${defaultSystemPrompt(companyName)}\n\n${agentConfig.system_prompt_override}`
     : defaultSystemPrompt(companyName)
+
+  try {
+    const queryEmbedding = await embedText(incomingText, 'query')
+    const { data: insights } = await supabaseAdmin.rpc('match_insights', {
+      query_embedding: queryEmbedding,
+      match_count: 5,
+    })
+    if (insights?.length) {
+      const bulletList = insights.map((i: any) => `- (${i.category}) ${i.insight_text}`).join('\n')
+      basePrompt += `\n\n## Conhecimento coletivo (padrões aprovados de outras conversas de venda)\n${bulletList}\n\nUse isso como referência, não como script — adapte ao contexto real dessa conversa.`
+    }
+  } catch (err) {
+    console.error('Retrieval de insights falhou (seguindo sem esse contexto):', err)
+  }
+
+  const systemPrompt = basePrompt
 
   const messages: any[] = history.map((m) => ({
     role: m.direction === 'inbound' ? 'user' : 'assistant',
@@ -206,6 +241,7 @@ async function executeTool(name: string, input: unknown, ctx: ToolContext): Prom
         })
         const stageId = await findStageByCategory(supabaseAdmin, tenantId, 'won')
         if (stageId) await supabaseAdmin.from('leads').update({ stage_id: stageId }).eq('id', leadId)
+        dispararExtracaoInsights(conversationId, 'won')
         return `Venda de R$${(value_cents / 100).toFixed(2)} registrada e lead movido pro estagio de venda ganha.`
       }
       case 'agendar_followup': {
@@ -224,6 +260,7 @@ async function executeTool(name: string, input: unknown, ctx: ToolContext): Prom
         const stageId = await findStageByCategory(supabaseAdmin, tenantId, 'lost')
         if (stageId) await supabaseAdmin.from('leads').update({ stage_id: stageId }).eq('id', leadId)
         await supabaseAdmin.from('conversations').update({ status: 'closed' }).eq('id', conversationId)
+        dispararExtracaoInsights(conversationId, 'lost')
         return `Conversa marcada como perdida (${reason}).`
       }
       case 'escalar_para_humano': {
