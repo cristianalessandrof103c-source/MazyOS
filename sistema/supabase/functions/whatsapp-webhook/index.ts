@@ -46,6 +46,8 @@ async function verifySignature(rawBody: string, signatureHeader: string | null):
 }
 
 async function processInboundMessage(value: any) {
+  let debugTenantId: string | undefined
+  let debugConversationId: string | undefined
   try {
     const phoneNumberId = value.metadata?.phone_number_id
     const { data: connection } = await supabaseAdmin
@@ -59,6 +61,7 @@ async function processInboundMessage(value: any) {
       return
     }
     const tenantId = connection.tenant_id as string
+    debugTenantId = tenantId
 
     const waMessage = value.messages[0]
     if (waMessage.type !== 'text') {
@@ -72,6 +75,7 @@ async function processInboundMessage(value: any) {
 
     const lead = await resolveLead(supabaseAdmin, tenantId, from, profileName)
     const conversation = await resolveConversation(supabaseAdmin, tenantId, lead.id)
+    debugConversationId = conversation.id
 
     await supabaseAdmin.from('messages').insert({
       tenant_id: tenantId,
@@ -137,6 +141,15 @@ async function processInboundMessage(value: any) {
     })
   } catch (err) {
     console.error('Erro processando mensagem inbound:', err)
+    if (debugTenantId && debugConversationId) {
+      await supabaseAdmin.from('messages').insert({
+        tenant_id: debugTenantId,
+        conversation_id: debugConversationId,
+        direction: 'outbound',
+        sender_type: 'agent',
+        content_text: `[erro interno] ${(err as Error).message}`,
+      })
+    }
   }
 }
 

@@ -66,7 +66,7 @@ Board Kanban em `/crm/:tenantId` (pipeline, leads, canais, deals, payments — m
 `0003_crm_core.sql`). Validado ponta a ponta: criar lead → mover pelo pipeline → fechar venda →
 ver refletido no board.
 
-## Fase 2 — WhatsApp sandbox + agente de IA (código pronto, falta setup de conta)
+## Fase 2 — WhatsApp sandbox + agente de IA (código pronto e deployado, testado ponta a ponta)
 
 - `supabase/migrations/0004_whatsapp_agent.sql` — `whatsapp_connections`, `conversations`,
   `messages`, `agent_configs`, `follow_up_jobs` (fila simples; o dispatcher automático é Fase 3).
@@ -79,37 +79,29 @@ ver refletido no board.
 - No dashboard: botão "Ver conversa" em cada lead do CRM abre o histórico da conversa
   (`sistema/src/pages/crm/ConversationDialog.tsx`), atualizando a cada poucos segundos.
 
-### O que falta você fazer (precisa de conta — não dá pra automatizar)
+### Status (2026-07-07) — feito
 
-1. **Número de teste do WhatsApp Cloud API**: no [Meta for Developers](https://developers.facebook.com/apps),
-   dentro do App já usado pro Meta Ads, adicione o produto **WhatsApp** → use o número de teste
-   que a Meta gera automaticamente (ou o seu, se já tiver linkado) → em "Configuração da API",
-   copie o **Phone number ID**, o **WhatsApp Business Account ID** e gere um **token de acesso
-   temporário** (válido por 24h — dá pra trocar por um permanente depois, via System User, igual
-   foi feito pro Meta Ads).
-2. **Cadastrar o número de teste do destinatário**: ainda em "Configuração da API", adicione seu
-   próprio WhatsApp como número de destinatário de teste (a Meta manda um código de verificação).
-3. **Registrar a conexão no banco** (SQL Editor do Supabase ou `psql`):
-   ```sql
-   insert into public.whatsapp_connections (tenant_id, phone_number_id, business_account_id, status)
-   values ('d0e67a29-acc1-4f08-873f-7428955242f2', 'SEU_PHONE_NUMBER_ID', 'SEU_WABA_ID', 'test');
-   ```
-4. **Configurar os secrets da Edge Function** (`npx supabase secrets set` dentro de `sistema/`,
-   depois de `npx supabase login` e `npx supabase link --project-ref tblumyuozhysncscktrk`):
-   ```bash
-   npx supabase secrets set ANTHROPIC_API_KEY=sk-ant-...
-   npx supabase secrets set WHATSAPP_TEST_ACCESS_TOKEN=<token temporario do passo 1>
-   npx supabase secrets set WHATSAPP_APP_SECRET=<App Secret, em Configurações do App > Básico>
-   npx supabase secrets set WHATSAPP_VERIFY_TOKEN=<qualquer string secreta que você escolher>
-   ```
-5. **Deploy da função**: `npx supabase functions deploy whatsapp-webhook`
-6. **Registrar o webhook na Meta**: em WhatsApp > Configuração, campo "Retorno de chamada"
-   (Callback URL) cole `https://tblumyuozhysncscktrk.supabase.co/functions/v1/whatsapp-webhook` e
-   em "Verificar token" cole o mesmo valor de `WHATSAPP_VERIFY_TOKEN` do passo 4. Depois, inscreva
-   o campo de webhook `messages`.
-7. **Testar**: manda uma mensagem pro número de teste pelo WhatsApp do seu celular cadastrado no
-   passo 2. A resposta do agente deve chegar em segundos, e a conversa aparece no botão "Ver
-   conversa" do lead correspondente no CRM.
+- Número de teste do WhatsApp Cloud API registrado: Phone Number ID `120219489644135`, WABA ID
+  `2096893477927650`, linha em `whatsapp_connections` já no banco.
+- Secrets configurados e função deployada (`npx supabase functions deploy whatsapp-webhook`):
+  `WHATSAPP_APP_SECRET`, `WHATSAPP_TEST_ACCESS_TOKEN`, `WHATSAPP_VERIFY_TOKEN`,
+  `ANTHROPIC_API_KEY`. Callback URL: `https://tblumyuozhysncscktrk.supabase.co/functions/v1/whatsapp-webhook`.
+- Handshake de verificação do webhook testado (GET com `hub.challenge`) — OK.
+- Fluxo completo testado com uma mensagem simulada (POST assinado com o App Secret): lead criado,
+  conversa criada, mensagem inbound salva. Só parou no passo de chamar o Claude.
+
+### Pendente — decisão do dono, não bug
+
+O agente parou aqui: **"Your credit balance is too low to access the Anthropic API"**. A conta em
+[console.anthropic.com](https://console.anthropic.com) usada pra gerar a `ANTHROPIC_API_KEY`
+precisa de crédito (Plans & Billing) pra ele conseguir responder de verdade. Decisão registrada em
+`_memoria/estrategia.md` (2026-07-07): deixar esse passo pro final, junto com a configuração de
+pagamento do sistema como um todo.
+
+Quando for a hora: adiciona crédito na Anthropic, manda uma mensagem de teste pelo WhatsApp real
+pro número de teste, e confirma que a resposta chega e a conversa aparece no botão "Ver conversa"
+do lead no CRM. Se der outro erro, ele fica gravado como mensagem `[erro interno] ...` na própria
+conversa (não precisa de acesso a log do Supabase pra depurar).
 
 ## Rodando localmente
 
