@@ -50,16 +50,24 @@ export function DashboardPage() {
 
         <ul className="mt-6 flex flex-col gap-3">
           {companies?.map((company) => (
-            <li key={company.id}>
-              <Link
-                to={`/crm/${company.id}`}
-                className="block rounded-xl border border-border bg-surface px-4 py-3 hover:border-violet/50"
-              >
+            <li
+              key={company.id}
+              className="flex items-center justify-between rounded-xl border border-border bg-surface px-4 py-3 hover:border-violet/50"
+            >
+              <Link to={`/crm/${company.id}`} className="flex-1">
                 <p className="font-medium">{company.name}</p>
                 <p className="text-xs text-text-faint">
                   {company.slug} · {company.plan_tier} · {company.status}
                 </p>
               </Link>
+              <div className="flex items-center gap-3 text-xs text-text-dim">
+                <Link to={`/crm/${company.id}`} className="hover:text-text">
+                  CRM
+                </Link>
+                <Link to={`/financeiro/${company.id}`} className="hover:text-text">
+                  Financeiro
+                </Link>
+              </div>
             </li>
           ))}
           {companies?.length === 0 && (

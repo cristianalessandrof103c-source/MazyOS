@@ -11,7 +11,7 @@
 
 import { createClient } from 'npm:@supabase/supabase-js@2'
 import Anthropic from 'npm:@anthropic-ai/sdk'
-import { enviarMensagemTexto } from './whatsapp-api.ts'
+import { enviarMensagemTexto } from '../_shared/whatsapp-api.ts'
 import { resolveConversation, resolveLead } from './crm.ts'
 import { runAgentLoop } from './agent.ts'
 

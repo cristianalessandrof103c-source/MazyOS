@@ -103,6 +103,52 @@ pro número de teste, e confirma que a resposta chega e a conversa aparece no bo
 do lead no CRM. Se der outro erro, ele fica gravado como mensagem `[erro interno] ...` na própria
 conversa (não precisa de acesso a log do Supabase pra depurar).
 
+## Fase 3 — follow-up automático + dashboard financeiro (pronto)
+
+### Motor de follow-up
+
+- `supabase/migrations/0005_follow_up_engine.sql` — `follow_up_sequences` +
+  `follow_up_sequence_steps` (tenant_id nulo = sequência padrão da plataforma, mesmo padrão de
+  `pipeline_stages`), `follow_up_jobs` estendida com `sequence_id`/`step_id`/`conversation_id`.
+  Sequências seedadas: **lead sem resposta** (24h → 72h) e **pós-venda** (7 dias).
+- Gatilhos automáticos (triggers Postgres): venda ganha/perdida cancela o follow-up de
+  "sem resposta" pendente e enfileira o próximo evento (`deal_won`/`deal_lost`); mensagem inbound
+  do lead cancela follow-up de "sem resposta" pendente daquela conversa.
+- `enqueue_lead_no_response_jobs()` — scan via `pg_cron` a cada 15min, enfileira o passo 1 de
+  conversas ativas, em estágio "in_progress", paradas há mais tempo que o delay do passo.
+- `supabase/functions/follow-up-dispatcher/` — chamada por `pg_cron`/`pg_net` a cada 2min. Job de
+  sequência: renderiza o template (`{{lead_name}}`, `{{company_name}}`) e manda via WhatsApp *só
+  dentro da janela de 24h* (fora dela precisaria de Template pré-aprovado pela Meta — ainda não
+  configurado, o job fica pendente pro próximo ciclo). Ao enviar, encadeia o próximo passo da
+  sequência automaticamente. Job ad-hoc (da tool `agendar_followup`, sem sequência) não manda
+  nada sozinho — escala a conversa pra `needs_human`, é um lembrete pro time, não uma mensagem
+  roteirizada.
+- **Testado ponta a ponta** (trigger de venda, trigger de resposta do lead, scan, encadeamento —
+  script de teste limpo depois). Achado real durante o teste: o token do WhatsApp configurado na
+  Fase 2 era temporário (24h) e expirou — precisa de um permanente (ver abaixo).
+
+### Dashboard financeiro
+
+- `supabase/migrations/0006_ad_spend.sql` — `ad_account_connections` (qual conta/campanhas
+  sincronizar por tenant) e `ad_spend_snapshots` (gasto/resultado diário).
+- `supabase/functions/sync-ad-spend/` — porta de `scripts/lib/meta-ads-api.js`
+  (`buscarInsightsDiarios`) pra Deno. Roda 1x/dia via `pg_cron`, testado manualmente (token válido,
+  API respondeu — só não tem dados porque a campanha de Ads está pausada).
+- Página `/financeiro/:tenantId` (link "Financeiro" no card de cada empresa no dashboard): KPIs
+  (leads no período, receita fechada/a receber, gasto de tráfego, CAC de canais pagos), tabela de
+  leads por canal e tabela de gasto por dia. Testada no navegador, sem erros de console.
+
+### Pendente
+
+- **Token do WhatsApp expirado** (mesmo bloqueio da Fase 2) — gerar um permanente via System User
+  `bkads` (Business Settings → System Users → gerar token com `whatsapp_business_messaging` +
+  `whatsapp_business_management`) e rodar `npx supabase secrets set WHATSAPP_TEST_ACCESS_TOKEN=...`.
+- Crédito na Anthropic (mesma decisão da Fase 2, deixada pro final).
+- Template pré-aprovado pela Meta pra follow-up funcionar fora da janela de 24h — sem isso, na
+  prática, o follow-up de "sem resposta" quase sempre vai cair com a janela já fechada (ela fecha
+  no mesmo instante em que o follow-up conta, 24h desde a última mensagem do lead). Funciona bem
+  pra pós-venda se a venda for registrada logo após a última mensagem.
+
 ## Rodando localmente
 
 ```bash
@@ -113,6 +159,5 @@ npm run dev
 ## Próximas fases
 
 Ver roadmap completo no plano. Em ordem: CRM manual (pronto) → WhatsApp sandbox + agente de IA
-(código pronto, aguardando setup de conta) → follow-up + dashboard financeiro → cérebro coletivo
-(RAG) → hub de integrações do MazyOS → corte pro WhatsApp real → white-label multi-tenant
-completo.
+(pronto, aguardando crédito) → follow-up + dashboard financeiro (pronto) → cérebro coletivo (RAG)
+→ hub de integrações do MazyOS → corte pro WhatsApp real → white-label multi-tenant completo.
