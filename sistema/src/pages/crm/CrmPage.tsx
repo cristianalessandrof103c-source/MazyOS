@@ -1,0 +1,152 @@
+import { useState } from 'react'
+import { Link, useParams } from 'react-router-dom'
+import { useQuery } from '@tanstack/react-query'
+import { supabase } from '../../lib/supabase'
+import { useAuth } from '../../contexts/AuthContext'
+import { NewLeadDialog } from './NewLeadDialog'
+import { CloseDealDialog } from './CloseDealDialog'
+import { LeadCard } from './LeadCard'
+import type { AcquisitionChannel, Lead, PipelineStage } from '../../lib/crm-types'
+
+export function CrmPage() {
+  const { tenantId } = useParams<{ tenantId: string }>()
+  const { signOut } = useAuth()
+  const [showNewLead, setShowNewLead] = useState(false)
+  const [dealLead, setDealLead] = useState<Lead | null>(null)
+
+  const stagesQuery = useQuery({
+    queryKey: ['pipeline-stages', tenantId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('pipeline_stages')
+        .select('*')
+        .or(`tenant_id.is.null,tenant_id.eq.${tenantId}`)
+        .order('order_index')
+      if (error) throw error
+      return data as PipelineStage[]
+    },
+  })
+
+  const channelsQuery = useQuery({
+    queryKey: ['acquisition-channels', tenantId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('acquisition_channels')
+        .select('*')
+        .or(`tenant_id.is.null,tenant_id.eq.${tenantId}`)
+      if (error) throw error
+      return data as AcquisitionChannel[]
+    },
+  })
+
+  const leadsQuery = useQuery({
+    queryKey: ['leads', tenantId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('leads')
+        .select('*')
+        .eq('tenant_id', tenantId)
+        .order('created_at', { ascending: false })
+      if (error) throw error
+      return data as Lead[]
+    },
+    enabled: Boolean(tenantId),
+  })
+
+  if (!tenantId) return null
+
+  const stages = stagesQuery.data ?? []
+  const channels = channelsQuery.data ?? []
+  const leads = leadsQuery.data ?? []
+
+  const newStage = stages.find((s) => s.category === 'new')
+  const wonStage = stages.find((s) => s.category === 'won')
+  const lostStage = stages.find((s) => s.category === 'lost')
+
+  const loading = stagesQuery.isLoading || channelsQuery.isLoading || leadsQuery.isLoading
+
+  return (
+    <div className="min-h-screen bg-bg text-text">
+      <header className="flex items-center justify-between border-b border-border px-6 py-4">
+        <div className="flex items-center gap-4">
+          <Link to="/" className="font-display text-lg font-semibold">
+            BK Solutions
+          </Link>
+          <span className="text-text-faint">/</span>
+          <span className="text-sm text-text-dim">CRM</span>
+        </div>
+        <button onClick={() => signOut()} className="text-sm text-text-dim hover:text-text">
+          Sair
+        </button>
+      </header>
+
+      <main className="px-6 py-8">
+        <div className="mb-6 flex items-center justify-between">
+          <h1 className="font-display text-xl font-semibold">Pipeline de leads</h1>
+          {newStage && (
+            <button
+              onClick={() => setShowNewLead(true)}
+              className="rounded-full bg-gradient-to-r from-violet to-cyan px-4 py-2 text-sm font-medium text-bg"
+            >
+              + Novo lead
+            </button>
+          )}
+        </div>
+
+        {loading && <p className="text-text-dim">Carregando…</p>}
+
+        {!loading && (
+          <div className="flex gap-4 overflow-x-auto pb-4">
+            {stages.map((stage) => {
+              const stageLeads = leads.filter((l) => l.stage_id === stage.id)
+              return (
+                <div key={stage.id} className="w-72 flex-shrink-0">
+                  <div className="mb-3 flex items-center justify-between">
+                    <h2 className="text-sm font-medium text-text-dim">{stage.name}</h2>
+                    <span className="text-xs text-text-faint">{stageLeads.length}</span>
+                  </div>
+                  <ul className="flex flex-col gap-2">
+                    {stageLeads.map((lead) => (
+                      <LeadCard
+                        key={lead.id}
+                        tenantId={tenantId}
+                        lead={lead}
+                        stages={stages}
+                        channel={channels.find((c) => c.id === lead.acquisition_channel_id)}
+                        onRegisterSale={() => setDealLead(lead)}
+                      />
+                    ))}
+                    {stageLeads.length === 0 && (
+                      <li className="rounded-xl border border-dashed border-border p-3 text-xs text-text-faint">
+                        Vazio
+                      </li>
+                    )}
+                  </ul>
+                </div>
+              )
+            })}
+          </div>
+        )}
+      </main>
+
+      {showNewLead && newStage && (
+        <NewLeadDialog
+          tenantId={tenantId}
+          newStageId={newStage.id}
+          channels={channels}
+          onClose={() => setShowNewLead(false)}
+        />
+      )}
+
+      {dealLead && wonStage && lostStage && (
+        <CloseDealDialog
+          tenantId={tenantId}
+          lead={dealLead}
+          wonStage={wonStage}
+          lostStage={lostStage}
+          onClose={() => setDealLead(null)}
+        />
+      )}
+    </div>
+  )
+}

@@ -17,6 +17,11 @@ Thumbs.db
 # Dependências
 node_modules/
 
+# Segredos (tokens de API — nunca commitar)
+.env
+.env.*
+!.env.example
+
 # Arquivos temporários
 *.log
 *.tmp

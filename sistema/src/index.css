@@ -1,0 +1,47 @@
+@import "tailwindcss";
+
+/*
+  Design tokens portados de saidas/site/styles.css (identidade "dark tech" da BK Solutions).
+  Servem como default de branding — cada tenant pode sobrescrever via companies.branding_json.
+*/
+@theme {
+  --color-bg: #06070c;
+  --color-bg-alt: #0a0c16;
+  --color-surface: #10121e;
+  --color-surface-2: #161927;
+  --color-border: rgba(255, 255, 255, 0.08);
+  --color-text: #eef0f6;
+  --color-text-dim: #9a9db3;
+  --color-text-faint: #656984;
+  --color-violet: #8b5cf6;
+  --color-cyan: #22d3ee;
+  --color-magenta: #ec4899;
+
+  --font-display: "Space Grotesk", sans-serif;
+  --font-body: "Inter", sans-serif;
+}
+
+@layer base {
+  * {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+  }
+
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    background: var(--color-bg);
+    color: var(--color-text);
+    font-family: var(--font-body);
+    font-weight: 300;
+    line-height: 1.5;
+  }
+
+  ::selection {
+    background: var(--color-violet);
+    color: #fff;
+  }
+}
