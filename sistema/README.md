@@ -355,6 +355,39 @@ relevantes pra qualquer Edge Function futura chamada pelo dashboard:
 
 Migration `0010_prospeccao.sql` aplicada via SQL Editor do Supabase (sem CLI).
 
+### Extensão — extração em massa até 1.000 leads (2026-07-13, aguardando deploy manual)
+
+Pedido do dono no mesmo dia: uma barra pra controlar quantos leads extrair por busca,
+até 1.000 (antes travava em ~20). A Google Places API só devolve ~60 resultados por
+busca de texto simples — acima disso a busca deixa de ser síncrona e vira um job em
+lote:
+
+- `supabase/migrations/0011_prospeccao_lote.sql` — tabela `prospeccao_jobs` (grade de
+  células `{lat, lng, radius_m}` gerada 1x, `next_cell_index`/`found_count` de
+  progresso), coluna `job_id` nova em `prospects`, e um `cron.schedule` de 1 em 1 minuto
+  chamando `prospeccao-worker` (mesmo padrão de `pg_cron` + `pg_net` + secret
+  `dispatcher_secret` do motor de follow-up da Fase 3).
+- `prospeccao-buscar` (editada): `target_count <= 60` continua síncrona (agora com
+  paginação, até 3 páginas); `target_count > 60` geocodifica a região (**Geocoding API**,
+  precisa habilitar essa API na mesma chave do Google, além da Places API (New)), gera
+  uma grade de até 60 células e cria o job, respondendo na hora só com o `job_id`.
+- `prospeccao-worker` (nova function) — chamada pelo cron, processa células da grade de
+  um job por vez dentro de um orçamento de ~100s por execução, atualizando o progresso a
+  cada célula. Termina quando bate o `target_count` ou esgota a grade.
+- Frontend: slider de 20 a 1.000 na página de Prospecção; acima de 60 mostra uma barra de
+  progresso (`found_count`/`target_count` + células processadas) que faz polling
+  enquanto o job está `processing`.
+- **As duas functions ficaram autocontidas (sem `_shared/`)** — o editor web do Supabase
+  ("Via Editor") deploya uma function por vez, sem suporte a pasta compartilhada entre
+  functions diferentes; a lógica da Places API/geocoding/grade está duplicada em
+  `prospeccao-buscar/index.ts` e `prospeccao-worker/index.ts`.
+
+**Pendente**: código no GitHub, mas o deploy manual ainda não foi confirmado —
+falta habilitar a Geocoding API na chave, rodar a migration `0011`, atualizar
+`prospeccao-buscar` com o código novo, e criar a function `prospeccao-worker` (com
+verificação de JWT desligada, diferente das outras — quem chama é o `pg_cron`, não um
+usuário logado). Ainda não testado ponta a ponta.
+
 ## Rodando localmente
 
 ```bash

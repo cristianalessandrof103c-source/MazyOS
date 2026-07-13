@@ -28,7 +28,16 @@ nova); só quando qualificado manualmente vira lead de verdade via RPC
 `convert_prospect_to_lead`. **Testada ponta a ponta em produção (2026-07-13) e
 funcionando**: migration aplicada via SQL Editor do Supabase, Edge Function deployada
 pelo painel web (sem CLI, sem Node.js local), frontend publicado no Netlify
-(`exquisite-babka-18957a.netlify.app`). Detalhes de cada fase em `sistema/README.md`.
+(`exquisite-babka-18957a.netlify.app`). Extensão pedida no mesmo dia (2026-07-13): barra
+pra escolher quantos leads extrair (até 1.000, antes travava em ~20). Acima de 60 (teto
+real da Google Places API por busca simples), vira uma extração em lote — geocodifica a
+região, gera uma grade de sub-áreas e processa aos poucos via `prospeccao-worker`
+(chamado por `pg_cron` a cada 1min, mesmo padrão do motor de follow-up da Fase 3), com
+barra de progresso no dashboard. Código implementado e no GitHub; **aguardando o dono
+terminar o deploy manual** (rodar a migration `0011_prospeccao_lote.sql`, atualizar a
+function `prospeccao-buscar`, criar a function nova `prospeccao-worker`, e habilitar a
+Geocoding API na chave do Google) — ainda não testado ponta a ponta. Detalhes de cada
+fase em `sistema/README.md`.
 
 ## O que pode esperar
 
