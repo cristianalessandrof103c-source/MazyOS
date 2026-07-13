@@ -1,0 +1,447 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8" />
+<title>BK Solutions — Carrossel de vendas (sistema + serviços)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --dark: #0E1116;
+    --light: #F5ECD7;
+    --accent: #E8B34C;
+    --on-dark: #FAFAF7;
+    --on-dark-muted: #C7C9CE;
+    --on-light: #1A1A1A;
+    --on-light-muted: #55524A;
+    --on-accent: #0E1116;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: 'Inter', sans-serif; }
+
+  .slide {
+    width: 1080px;
+    height: 1350px;
+    position: relative;
+    overflow: hidden;
+    padding: 90px 80px;
+  }
+  .slide.dark { background: var(--dark); color: var(--on-dark); }
+  .slide.light { background: var(--light); color: var(--on-light); }
+  .slide.accent { background: var(--accent); color: var(--on-accent); }
+
+  .header {
+    position: absolute;
+    top: 70px;
+    left: 80px;
+    right: 80px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .logo { font-size: 20px; font-weight: 700; letter-spacing: 0.02em; }
+  .counter { font-size: 14px; font-weight: 600; letter-spacing: 0.18em; opacity: 0.5; }
+
+  .eyebrow {
+    font-size: 15px;
+    font-weight: 800;
+    letter-spacing: 0.28em;
+    text-transform: uppercase;
+    color: var(--accent);
+  }
+  .slide.accent .eyebrow { color: var(--on-accent); opacity: 0.65; }
+
+  .regua { width: 70px; height: 4px; background: var(--accent); margin: 28px 0 36px; }
+  .slide.accent .regua { background: var(--on-accent); opacity: 0.65; }
+
+  .content { position: absolute; left: 80px; right: 80px; }
+
+  .headline {
+    font-size: 96px;
+    font-weight: 900;
+    line-height: 0.98;
+    letter-spacing: -0.04em;
+    max-width: 900px;
+  }
+  .h2 {
+    font-size: 66px;
+    font-weight: 800;
+    line-height: 1.05;
+    letter-spacing: -0.035em;
+    max-width: 860px;
+  }
+  .corpo {
+    margin-top: 40px;
+    font-size: 27px;
+    font-weight: 500;
+    line-height: 1.55;
+    max-width: 820px;
+  }
+  .dark .corpo { color: var(--on-dark-muted); }
+  .light .corpo { color: var(--on-light-muted); }
+
+  .subtitulo {
+    margin-top: 36px;
+    font-size: 27px;
+    font-weight: 500;
+    line-height: 1.5;
+    color: var(--on-dark-muted);
+    max-width: 760px;
+  }
+  .handle {
+    position: absolute;
+    left: 80px;
+    bottom: 90px;
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--on-dark-muted);
+  }
+
+  /* NÚMERO layout */
+  .numeral {
+    font-size: 300px;
+    font-weight: 800;
+    line-height: 1;
+    color: var(--accent);
+    letter-spacing: -0.02em;
+  }
+
+  /* Comparação mercado vs BK */
+  .compare-row {
+    margin-top: 44px;
+    padding-top: 36px;
+    border-top: 1px solid rgba(26,26,26,0.14);
+  }
+  .compare-row:first-of-type { margin-top: 52px; }
+  .compare-item { display: flex; align-items: flex-start; gap: 16px; font-size: 26px; font-weight: 500; line-height: 1.4; max-width: 800px; }
+  .compare-item.bad { color: var(--on-light-muted); margin-bottom: 16px; }
+  .compare-item.good { color: var(--on-light); font-weight: 700; }
+  .mark { font-weight: 800; flex-shrink: 0; }
+  .compare-item.bad .mark { color: #B7522F; }
+  .compare-item.good .mark { color: var(--accent); }
+
+  /* Planos (oferta) */
+  .plan-card {
+    margin-top: 30px;
+    background: #FFFFFF;
+    border: 1px solid rgba(26,26,26,0.12);
+    border-radius: 22px;
+    padding: 40px 44px;
+  }
+  .plan-card:first-of-type { margin-top: 54px; }
+  .plan-label {
+    font-size: 15px;
+    font-weight: 800;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--on-light-muted);
+  }
+  .plan-desc {
+    margin-top: 16px;
+    font-size: 23px;
+    font-weight: 500;
+    line-height: 1.45;
+    color: var(--on-light);
+    max-width: 760px;
+  }
+  .plan-price {
+    margin-top: 24px;
+    font-size: 46px;
+    font-weight: 900;
+    letter-spacing: -0.02em;
+    color: var(--accent);
+  }
+
+  /* Condições de pagamento */
+  .pay-row {
+    margin-top: 42px;
+    padding-top: 30px;
+    border-top: 1px solid rgba(255,255,255,0.12);
+  }
+  .pay-row:first-of-type { margin-top: 54px; }
+  .pay-plan {
+    font-size: 15px;
+    font-weight: 800;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--accent);
+  }
+  .pay-options { margin-top: 18px; display: flex; gap: 56px; }
+  .pay-option .label {
+    display: block;
+    font-size: 14px;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--on-dark-muted);
+    margin-bottom: 8px;
+  }
+  .pay-option .value { font-size: 34px; font-weight: 800; color: var(--on-dark); }
+
+  .bonus-box {
+    margin-top: 50px;
+    background: var(--accent);
+    color: var(--on-accent);
+    border-radius: 20px;
+    padding: 32px 38px;
+    font-size: 24px;
+    font-weight: 700;
+    line-height: 1.4;
+    max-width: 820px;
+  }
+
+  /* Rodapé com CTA (slides internos, quando usado) */
+  .rodape {
+    position: absolute;
+    left: 80px;
+    right: 80px;
+    bottom: 90px;
+    border-top: 1px solid rgba(255,255,255,0.12);
+    padding-top: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .light .rodape { border-top: 1px solid rgba(26,26,26,0.14); }
+
+  .cta-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 14px;
+    background: var(--accent);
+    color: var(--on-accent);
+    font-weight: 800;
+    font-size: 26px;
+    letter-spacing: -0.01em;
+    padding: 24px 44px;
+    border-radius: 100px;
+  }
+
+  /* Slide final */
+  .cta-wrap {
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 0 100px;
+  }
+  .cta-marca { font-size: 24px; font-weight: 800; letter-spacing: 0.02em; opacity: 0.7; margin-bottom: 28px; }
+  .cta-headline {
+    font-size: 72px;
+    font-weight: 900;
+    line-height: 1.04;
+    letter-spacing: -0.03em;
+    color: var(--on-accent);
+  }
+  .cta-sub {
+    margin-top: 28px;
+    font-size: 26px;
+    font-weight: 500;
+    color: var(--on-accent);
+    opacity: 0.8;
+    max-width: 780px;
+  }
+  .cta-final-btn {
+    margin-top: 56px;
+    display: inline-flex;
+    align-items: center;
+    gap: 14px;
+    background: var(--on-accent);
+    color: var(--accent);
+    font-weight: 800;
+    font-size: 28px;
+    letter-spacing: -0.01em;
+    padding: 26px 48px;
+    border-radius: 100px;
+  }
+</style>
+</head>
+<body>
+
+<!-- SLIDE 1 — CAPA -->
+<div class="slide dark">
+  <div class="header">
+    <div class="logo">BK Solutions</div>
+    <div class="counter">01 / 10</div>
+  </div>
+  <div class="content" style="top: 420px;">
+    <div class="eyebrow">BK SOLUTIONS · IA + MARKETING</div>
+    <div class="regua"></div>
+    <div class="headline">Sua clínica<br/>lota a agenda<br/>sozinha</div>
+    <div class="subtitulo">IA implementada de verdade + marketing que gera agenda cheia.</div>
+  </div>
+  <div class="handle">@bksolutions</div>
+</div>
+
+<!-- SLIDE 2 — CONTEXTO -->
+<div class="slide light">
+  <div class="header">
+    <div class="logo">BK Solutions</div>
+    <div class="counter">02 / 10</div>
+  </div>
+  <div class="content" style="top: 320px;">
+    <div class="eyebrow">O QUE TÁ ACONTECENDO</div>
+    <div class="regua"></div>
+    <div class="h2">Sua clínica perde paciente antes de perder pra concorrência</div>
+    <div class="corpo">Lead manda mensagem e demora 40 minutos pra alguém responder. Anúncio roda sem ninguém acompanhar de perto. Cada área trabalha isolada, sem dado nenhum conversando entre si. O resultado: agenda com buraco todo mês.</div>
+  </div>
+</div>
+
+<!-- SLIDE 3 — VIRADA / TESE -->
+<div class="slide dark">
+  <div class="header">
+    <div class="logo">BK Solutions</div>
+    <div class="counter">03 / 10</div>
+  </div>
+  <div class="content" style="top: 320px;">
+    <div class="eyebrow">O QUE A BK FAZ DIFERENTE</div>
+    <div class="regua"></div>
+    <div class="h2">A gente não vende só marketing. A gente monta o sistema por trás dele.</div>
+    <div class="corpo">Depois de 5 anos rodando marketing pra clínica, vimos que anúncio bom não resolve sozinho. Por isso a BK entrega duas coisas juntas: um sistema de IA plugado no dia a dia da sua clínica e a máquina de marketing que enche a agenda.</div>
+  </div>
+</div>
+
+<!-- SLIDE 4 — O SISTEMA -->
+<div class="slide light">
+  <div class="header">
+    <div class="logo">BK Solutions</div>
+    <div class="counter">04 / 10</div>
+  </div>
+  <div class="content" style="top: 320px;">
+    <div class="eyebrow">O SISTEMA</div>
+    <div class="regua"></div>
+    <div class="h2">IA que atende, organiza e não deixa lead esfriar</div>
+    <div class="corpo">Resposta automática no WhatsApp, agendamento sem fricção, dashboard com o dado da sua clínica num lugar só — e sistema sob medida quando o seu processo pede algo específico (até controle de estoque, se for o caso).</div>
+  </div>
+</div>
+
+<!-- SLIDE 5 — O MARKETING -->
+<div class="slide dark">
+  <div class="header">
+    <div class="logo">BK Solutions</div>
+    <div class="counter">05 / 10</div>
+  </div>
+  <div class="content" style="top: 320px;">
+    <div class="eyebrow">O MARKETING</div>
+    <div class="regua"></div>
+    <div class="h2">Site que converte e anúncio que não queima verba</div>
+    <div class="corpo">Landing page pensada pra transformar visita em agendamento, tráfego pago acompanhado de perto — não é "sobe e esquece" — e conteúdo que fala a língua de quem tá decidindo se cuida ou não.</div>
+  </div>
+</div>
+
+<!-- SLIDE 6 — MERCADO VS BK -->
+<div class="slide light">
+  <div class="header">
+    <div class="logo">BK Solutions</div>
+    <div class="counter">06 / 10</div>
+  </div>
+  <div class="content" style="top: 300px;">
+    <div class="eyebrow">MERCADO VS BK</div>
+    <div class="regua"></div>
+    <div class="h2" style="font-size: 58px;">Dá pra ver a diferença antes mesmo de fechar</div>
+
+    <div class="compare-row">
+      <div class="compare-item bad"><span class="mark">✕</span> Agência entrega anúncio e some</div>
+      <div class="compare-item good"><span class="mark">✓</span> BK acompanha o resultado todo dia</div>
+    </div>
+    <div class="compare-row">
+      <div class="compare-item bad"><span class="mark">✕</span> Sistema e marketing em fornecedores diferentes, sem conversar</div>
+      <div class="compare-item good"><span class="mark">✓</span> BK integra IA e marketing num squad só, com dado compartilhado</div>
+    </div>
+    <div class="compare-row">
+      <div class="compare-item bad"><span class="mark">✕</span> Promete "revolucionar seu negócio"</div>
+      <div class="compare-item good"><span class="mark">✓</span> BK entrega sistema rodando, sem enrolação</div>
+    </div>
+  </div>
+</div>
+
+<!-- SLIDE 7 — PROVA -->
+<div class="slide dark">
+  <div class="header">
+    <div class="logo">BK Solutions</div>
+    <div class="counter">07 / 10</div>
+  </div>
+  <div class="content" style="top: 300px;">
+    <div class="eyebrow">5 ANOS DE BK</div>
+    <div class="numeral">5</div>
+    <div class="h2" style="margin-top: -10px;">anos ajudando clínica de estética a lotar a agenda</div>
+    <div class="corpo">Um squad só cuidando de IA e marketing juntos, com o mesmo dado na mão pros dois lados conversarem de verdade.</div>
+  </div>
+</div>
+
+<!-- SLIDE 8 — OS PLANOS -->
+<div class="slide light">
+  <div class="header">
+    <div class="logo">BK Solutions</div>
+    <div class="counter">08 / 10</div>
+  </div>
+  <div class="content" style="top: 280px;">
+    <div class="eyebrow">A PROPOSTA</div>
+    <div class="regua"></div>
+    <div class="h2" style="font-size: 56px;">Dois jeitos de tirar sua clínica do modo manual</div>
+
+    <div class="plan-card">
+      <div class="plan-label">Tráfego + presença digital</div>
+      <div class="plan-desc">Site que converte, tráfego pago acompanhado de perto, LinkedIn organizado e carrossel estruturado pro Instagram.</div>
+      <div class="plan-price">R$ 5.000</div>
+    </div>
+
+    <div class="plan-card">
+      <div class="plan-label">Ecossistema BK Solutions</div>
+      <div class="plan-desc">Todo o sistema de IA implementado nos seus processos + toda a máquina de marketing rodando integrada.</div>
+      <div class="plan-price">R$ 10.000</div>
+    </div>
+  </div>
+</div>
+
+<!-- SLIDE 9 — CONDIÇÕES DE PAGAMENTO -->
+<div class="slide dark">
+  <div class="header">
+    <div class="logo">BK Solutions</div>
+    <div class="counter">09 / 10</div>
+  </div>
+  <div class="content" style="top: 280px;">
+    <div class="eyebrow">CONDIÇÕES DE PAGAMENTO</div>
+    <div class="regua"></div>
+    <div class="h2" style="font-size: 56px;">Escolhe como fecha</div>
+
+    <div class="pay-row">
+      <div class="pay-plan">Tráfego + presença digital</div>
+      <div class="pay-options">
+        <div class="pay-option"><span class="label">Pix à vista</span><span class="value">R$ 4.000</span></div>
+        <div class="pay-option"><span class="label">Parcelado no crédito</span><span class="value">R$ 7.000</span></div>
+      </div>
+    </div>
+
+    <div class="pay-row">
+      <div class="pay-plan">Ecossistema BK Solutions</div>
+      <div class="pay-options">
+        <div class="pay-option"><span class="label">Pix à vista</span><span class="value">R$ 9.000</span></div>
+        <div class="pay-option"><span class="label">Parcelado no crédito</span><span class="value">R$ 12.000</span></div>
+      </div>
+    </div>
+
+    <div class="bonus-box">Fechou no Pix à vista? Ganha 1 mês de tráfego pago por conta da BK.</div>
+  </div>
+</div>
+
+<!-- SLIDE 10 — CTA FINAL -->
+<div class="slide accent">
+  <div class="header">
+    <div class="logo">BK Solutions</div>
+    <div class="counter">10 / 10</div>
+  </div>
+  <div class="cta-wrap">
+    <div class="cta-marca">BK SOLUTIONS</div>
+    <div class="cta-headline">Vamos tirar sua<br/>clínica do modo<br/>manual?</div>
+    <div class="cta-sub">Fechando no Pix à vista, o primeiro mês de tráfego é por nossa conta.</div>
+    <div class="cta-final-btn">Fala com a gente no WhatsApp →</div>
+  </div>
+</div>
+
+</body>
+</html>

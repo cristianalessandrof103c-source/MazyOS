@@ -59,3 +59,63 @@ export type Message = {
   tool_calls: { name: string; input: unknown }[] | null
   created_at: string
 }
+
+export type IntegrationHubTool = 'carrossel' | 'seo' | 'site' | 'instagram_post' | 'ads_campaign'
+export type IntegrationHubStatus = 'pending' | 'processing' | 'done' | 'failed'
+
+export type CarrosselJobResult = { images: string[]; caption: string }
+export type InstagramPostJobResult = { post_id: string; permalink: string | null }
+
+export type IntegrationHubJob = {
+  id: string
+  tenant_id: string
+  tool: IntegrationHubTool
+  status: IntegrationHubStatus
+  params: Record<string, unknown>
+  result: CarrosselJobResult | InstagramPostJobResult | null
+  error: string | null
+  created_at: string
+}
+
+export type ProspectStatus = 'novo' | 'contatado' | 'qualificado' | 'descartado' | 'convertido'
+
+export type Prospect = {
+  id: string
+  tenant_id: string
+  place_id: string
+  name: string
+  formatted_address: string | null
+  phone_number: string | null
+  website: string | null
+  instagram_url: string | null
+  linkedin_url: string | null
+  google_maps_url: string | null
+  latitude: number | null
+  longitude: number | null
+  search_niche: string | null
+  search_region: string | null
+  status: ProspectStatus
+  notes: string | null
+  converted_lead_id: string | null
+  created_at: string
+}
+
+export type MembershipRole = 'tenant_admin' | 'tenant_manager' | 'tenant_agent' | 'tenant_viewer'
+export type MembershipStatus = 'invited' | 'active' | 'disabled'
+
+export type Membership = {
+  id: string
+  tenant_id: string
+  user_id: string
+  role: MembershipRole
+  status: MembershipStatus
+  invited_email: string | null
+  invited_at: string | null
+  accepted_at: string | null
+  created_at: string
+}
+
+export type Profile = {
+  id: string
+  full_name: string | null
+}

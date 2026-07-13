@@ -16,6 +16,9 @@ Conforme você for ativando skills, isso aqui vai sendo populado. Lista do que c
 | `/aprovar-post` | `postar-facebook.js` | Publica carrossel no Facebook via Meta Graph API |
 | `/anuncio-google` | (nenhum — gera CSV direto) | — |
 | `/relatorio-ads` | (lê CSV exportado das plataformas) | — |
+| `/anuncio-meta` | `lib/meta-ads-api.js` | Cria campanha/conjunto/criativo/anúncio via Marketing API, sempre PAUSED |
+| `/otimizar-meta-ads` | `otimizar-meta-ads.js` | Escalona orçamento e pausa (kill-switch) conforme regras travadas em `marketing/integracao-meta-ads/config.json` |
+| Hub de integrações (`sistema/`, Fase 5) | `hub-worker.js` | Processa jobs "carrossel" pendentes em `integration_hub_jobs`: roda o `render.js` da pasta, sobe os PNGs pro Storage do Supabase. Rodado manualmente: `node --env-file=.env scripts/hub-worker.js` |
 
 ## Pré-requisitos comuns
 
@@ -29,7 +32,11 @@ OPENAI_API_KEY=sk-...               # pra gerar-imagem.js
 META_PAGE_ACCESS_TOKEN=...          # pra postar-instagram.js + postar-facebook.js
 META_PAGE_ID=...
 META_IG_USER_ID=...
+META_ADS_ACCESS_TOKEN=...           # pra anuncio-meta + otimizar-meta-ads (token de System User, ver marketing/integracao-meta-ads/setup-meta-ads-api.md)
+META_AD_ACCOUNT_ID=...
 SITE_URL=https://seudominio.com.br
+SUPABASE_URL=...                    # pra hub-worker.js (Project Settings > API do projeto sistema/)
+SUPABASE_SERVICE_ROLE_KEY=...        # idem — nunca comitar, só pra rodar local
 ```
 
 **Playwright** (pra renderizar HTML em PNG):

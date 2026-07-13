@@ -16,11 +16,11 @@
 
 import { createClient } from 'npm:@supabase/supabase-js@2'
 import { enviarMensagemTexto } from '../_shared/whatsapp-api.ts'
+import { tokenParaConexao } from '../_shared/whatsapp-tokens.ts'
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!
 const SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
 const DISPATCHER_SECRET = Deno.env.get('DISPATCHER_SECRET') ?? ''
-const WHATSAPP_ACCESS_TOKEN = Deno.env.get('WHATSAPP_TEST_ACCESS_TOKEN') ?? ''
 
 const supabaseAdmin = createClient(SUPABASE_URL, SERVICE_ROLE_KEY)
 
@@ -49,12 +49,13 @@ async function processJob(job: any) {
     .eq('id', job.conversation_id)
     .single()
   const { data: company } = await supabaseAdmin.from('companies').select('name').eq('id', job.tenant_id).single()
-  const { data: connection } = await supabaseAdmin
+  const { data: connections } = await supabaseAdmin
     .from('whatsapp_connections')
-    .select('phone_number_id')
+    .select('phone_number_id, status')
     .eq('tenant_id', job.tenant_id)
-    .limit(1)
-    .maybeSingle()
+  // Se o tenant tiver as duas conexões (test + live, durante o corte da Fase 6),
+  // prioriza a live — é a que de fato conversa com leads reais.
+  const connection = connections?.find((c) => c.status === 'live') ?? connections?.[0]
 
   if (!step || !lead?.phone_number || !conversation || !connection) {
     await supabaseAdmin
@@ -79,7 +80,7 @@ async function processJob(job: any) {
 
   const waMessageId = await enviarMensagemTexto({
     phoneNumberId: connection.phone_number_id,
-    token: WHATSAPP_ACCESS_TOKEN,
+    token: tokenParaConexao(connection.status),
     to: lead.phone_number,
     body: text,
   })

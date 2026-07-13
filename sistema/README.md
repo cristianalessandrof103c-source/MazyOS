@@ -191,6 +191,155 @@ padrões de venda que melhora com cada conversa, de qualquer cliente da platafor
 - **Dedup semanal de insights parecidos** (mencionado no plano) — não implementado ainda; com o
   volume atual de conversas isso não é urgente, mas fica registrado pra quando o cérebro crescer.
 
+## Fase 5 — hub de integrações do MazyOS (pronto)
+
+Conecta o dashboard às automações de marketing que já existem como scripts (carrossel via
+Playwright, publicação via Meta Graph API), sem reescrever a lógica de negócio. Escopo desta
+leva: só carrossel → Instagram (Facebook e campanha de Ads ficam pra uma próxima leva).
+
+- `supabase/migrations/0008_integration_hub.sql` — `integration_hub_jobs` (fila de jobs por
+  tenant, `tool` já reserva `seo`/`site`/`ads_campaign` além de `carrossel`/`instagram_post`) e
+  o bucket público `hub-media` (a Graph API exige URL pública pra buscar a imagem).
+- `scripts/hub-worker.js` — worker **local, rodado manualmente** (decisão do dono: nada de
+  serviço always-on no Railway/Fly por enquanto). Pega jobs `carrossel` pendentes, roda o
+  `render.js` da pasta (Playwright, sem alteração), sobe os PNGs pro Storage. Uso:
+  `node --env-file=.env scripts/hub-worker.js`.
+- `supabase/functions/hub-instagram-publish/` + `_shared/meta-graph.ts` (porte de
+  `scripts/lib/meta-graph.js`) — chamada pelo dashboard autenticado (mantém verificação de JWT
+  padrão, diferente do webhook/cron), publica no Instagram e registra o resultado como um novo
+  job (`tool='instagram_post'`).
+- Página `/hub/:tenantId` (link "Hub" no card de cada empresa): botão "Gerar carrossel" (cria o
+  job), lista com polling automático enquanto há job pendente/processando, thumbnail + botão
+  "Publicar no Instagram" quando o carrossel termina de renderizar.
+
+### Pendente
+
+- **`META_PAGE_ACCESS_TOKEN` / `META_IG_USER_ID`** como secrets da função (`npx supabase secrets
+  set`) — sem eles, "Publicar no Instagram" responde com erro claro em vez de postar de verdade
+  (mesmo tipo de bloqueio "pronto, aguardando credencial" das fases anteriores).
+- Aplicar a migration no projeto hospedado e fazer deploy da função.
+
+## Fase 6 — corte pro WhatsApp real (bloqueado — aguardando a Meta)
+
+Gated pela verificação de empresa da Meta (`business.facebook.com/settings/security`, iniciada
+2026-07-07, prazo estimado até 2026-07-21 — ver `_memoria/estrategia.md`). Sem essa aprovação
+não dá pra registrar o número real nem migrar a conexão de `test` pra `live`.
+
+O que já foi adiantado, sem depender da aprovação: `whatsapp-webhook` e `follow-up-dispatcher`
+agora resolvem o token de acesso por conexão (`supabase/functions/_shared/whatsapp-tokens.ts`,
+`status='live'` → `WHATSAPP_LIVE_ACCESS_TOKEN`, `status='test'` → `WHATSAPP_TEST_ACCESS_TOKEN`)
+em vez de um único secret fixo — antes disso, conectar um número real ao lado do número de teste
+faria a resposta pro número real sair com o token errado. `follow-up-dispatcher` também passou a
+priorizar a conexão `live` quando o tenant tiver as duas. O schema já suportava isso desde a Fase
+2 (`whatsapp_connections.status`).
+
+### Quando a verificação aprovar
+
+1. Registrar o número real no WhatsApp Manager e conectá-lo ao mesmo App (Tech Provider da BK).
+2. Gerar um token permanente via System User `bkads` com `whatsapp_business_messaging` +
+   `whatsapp_business_management`, e setar `npx supabase secrets set
+   WHATSAPP_LIVE_ACCESS_TOKEN=...`.
+3. Inserir a linha em `whatsapp_connections` (`status='live'`) pro número real — pode conviver
+   com a linha `test` já existente.
+4. Assinar o webhook do número real pra `whatsapp-webhook` (mesma URL do número de teste).
+5. Soft-launch monitorado: acompanhar pelo CRM (botão "Ver conversa") antes de considerar o
+   número real em produção plena.
+
+Depende também dos mesmos bloqueios já registrados nas Fases 2-4 (crédito na Anthropic, token
+permanente do WhatsApp) — sem eles o agente não responde de verdade, real ou de teste.
+
+## Fase 7 (parte 1) — convite self-service + branding por tenant (pronto)
+
+White-label completo (Embedded Signup do WhatsApp por cliente, OAuth de ads, billing de
+verdade) segue bloqueado — Embedded Signup ainda não foi solicitado à Meta (prazo desconhecido)
+e billing (decisão do dono: mensalidade fixa de R$97,00/mês por plano) ainda não tem integração. Essa leva
+cobre só as duas peças que não dependem de nada externo:
+
+- `supabase/migrations/0009_team_and_branding.sql` — `memberships.invited_email`, policy
+  `memberships_accept_self` (convidado aceita o próprio convite), policy
+  `profiles_select_tenant_members` (colegas de tenant enxergam o nome um do outro) e a função
+  `update_company_branding` (`security definer`, só tenant_admin/platform admin editam
+  `companies.branding_json`).
+- `supabase/functions/invite-member/` — chamada pelo dashboard, checa se quem chama é
+  tenant_admin daquele tenant, convida via `auth.admin.inviteUserByEmail` e cria a membership
+  como `status='invited'`. Caso não tratado nesta leva: email que já tem conta em outro tenant
+  — a função devolve o erro e o vínculo manual fica por SQL, mesmo padrão do setup da Fase 0.
+- `LoginPage.tsx` ganhou o fluxo "Defina sua senha" — o link de convite do Supabase já
+  autentica ao carregar a página; sem isso o convidado cairia direto no dashboard com uma senha
+  aleatória que nunca viu.
+- `DashboardPage.tsx` aceita o convite ao carregar (flipa `status` pra `active`) e força
+  `refreshSession()` — os claims `tenant_ids` do JWT são fixados na emissão do token, então sem
+  isso o tenant novo só apareceria no refresh automático (até 1h) ou no próximo login.
+- Página `/configuracoes/:tenantId` (link "Configurações" no card de cada empresa): seção
+  Equipe (lista + convidar, só tenant_admin/platform admin convidam) e seção Marca (cor
+  primária + logo, só tenant_admin/platform admin editam). `src/lib/branding.ts` aproveita que
+  os tokens de cor do Tailwind (`index.css`) já são CSS custom properties — sobrescrever
+  `--color-violet` no container aplica a cor em cascata sem rebuild. `CrmPage`/`FinanceiroPage`/
+  `HubPage` passaram a usar o `TenantHeader` compartilhado e essa mesma cor por tenant.
+
+### Pendente
+
+- Configurar a URL de produção em `auth.additional_redirect_urls`/`site_url` (Supabase Auth) —
+  sem isso o link de convite não funciona fora do `localhost`.
+- Trocar/remover role de um membro já ativo, reenviar convite — só criar e listar por agora.
+
+## UI — sidebar de navegação + dashboard "Visão Geral" (pronto, 2026-07-08)
+
+Pedido do dono: navegação (CRM/Financeiro/Hub/Configurações) numa barra lateral fixa, e uma
+tela inicial de verdade (leads, receita, gráficos) em vez da lista de empresas nua.
+
+- `src/components/TenantSidebarLayout.tsx` — substitui o antigo `TenantHeader` (removido) em
+  todas as páginas por tenant: sidebar esquerda fixa (nome/logo do tenant, nav vertical com
+  `NavLink` — Visão Geral/CRM/Financeiro/Hub/Configurações, rodapé com email + "Trocar empresa"
+  + Sair) + área de conteúdo.
+- `/` virou `src/pages/RootRedirect.tsx`: roda o accept-invite (movido de `DashboardPage`, já
+  que `/` é o único ponto por onde todo login passa) e decide a rota — 1 empresa só → vai direto
+  pra `/visao-geral/:id`; 2+ → manda pra `/empresas` (a lista antiga, deslocada pra essa rota).
+- `src/pages/overview/OverviewPage.tsx` (`/visao-geral/:tenantId`, tela inicial): mesmos KPIs do
+  Financeiro (leads, receita fechada/a receber, gasto, CAC) + 3 gráficos — leads/dia, receita ×
+  gasto/dia, leads por canal. Usa as **mesmas query keys** do `FinanceiroPage.tsx`, então
+  navegar entre as duas páginas não refaz fetch.
+- Gráficos são componentes próprios (`src/components/charts/TimeSeriesChart.tsx` e
+  `HorizontalBarChart.tsx`, SVG/div puro, sem lib nova), seguindo a skill de dataviz do Claude
+  Code: paleta validada com `scripts/validate_palette.js` da skill contra o tema atual (o cyan
+  de marca `#22d3ee` é claro demais pra mark de gráfico — usa um passo mais escuro `#0e93ab` só
+  ali dentro, a cor de UI não muda), hover com crosshair+tooltip, sem dual-axis.
+
+## Fase 8 — Prospecção (pronto, não testado ponta a ponta)
+
+Pedido do dono (2026-07-13), inspirado no concorrente Kaptar: busca de prospects por
+nicho+região, num funil separado do CRM — só quando qualificado manualmente vira lead
+de verdade.
+
+- `supabase/migrations/0010_prospeccao.sql` — tabela `prospects` (dedup por
+  `unique(tenant_id, place_id)`, status próprio: novo/contatado/qualificado/
+  descartado/convertido), canal de aquisição template `prospeccao_ativa`, e o RPC
+  `security definer` `convert_prospect_to_lead` (cria a linha em `leads` + marca o
+  prospect como convertido, atômico). RLS: client só enxerga e muda status/notes
+  (nunca `convertido` direto); insert é só via service role.
+- `supabase/functions/prospeccao-buscar/` — Edge Function síncrona (sem fila/worker,
+  diferente do Hub — aqui é só `fetch`): chama a **Places API (New)**
+  (`places.googleapis.com/v1/places:searchText`, com `X-Goog-FieldMask` pra trazer
+  telefone/site na mesma chamada, até 20 resultados), e pra cada resultado com site
+  tenta extrair Instagram/LinkedIn do HTML público dele (regex, timeout de 6s por
+  site, `Promise.allSettled` em paralelo, best-effort — nunca quebra a busca). Upsert
+  em `prospects` via service role.
+- Página `/prospeccao/:tenantId` (link "Prospecção" na sidebar, logo após CRM): form de
+  busca (nicho + região), lista de prospects com filtro por status, `<select>` de
+  status por prospect e botão "Converter em lead".
+
+### Pendente
+
+- **`GOOGLE_PLACES_API_KEY`** — sem essa secret (`npx supabase secrets set
+  GOOGLE_PLACES_API_KEY=...`), a função responde com erro claro em vez de buscar de
+  verdade. Precisa billing habilitado no Google Cloud do usuário e a **"Places API
+  (New)"** especificamente ativada (produto diferente da Places API legada).
+- Aplicar a migration no projeto hospedado (`npx supabase db push`) e fazer deploy da
+  função (`npx supabase functions deploy prospeccao-buscar`).
+- Não testado ponta a ponta ainda — o ambiente onde isso foi implementado não tinha
+  Node.js instalado, então não deu pra rodar typecheck/build nem `npm run dev` pra
+  confirmar visualmente antes de entregar.
+
 ## Rodando localmente
 
 ```bash
@@ -202,5 +351,8 @@ npm run dev
 
 Ver roadmap completo no plano. Em ordem: CRM manual (pronto) → WhatsApp sandbox + agente de IA
 (pronto, aguardando crédito) → follow-up + dashboard financeiro (pronto) → cérebro coletivo/RAG
-(pronto, aguardando chave da Voyage) → hub de integrações do MazyOS → corte pro WhatsApp real →
-white-label multi-tenant completo.
+(pronto, aguardando chave da Voyage) → hub de integrações do MazyOS (pronto, aguardando
+credenciais do Meta) → corte pro WhatsApp real (bloqueado, aguardando verificação da Meta) →
+white-label multi-tenant completo (convite self-service + branding prontos; Embedded Signup do
+WhatsApp, OAuth de ads e billing de verdade seguem pendentes) → prospecção (pronto, aguardando
+chave da Google Places API e teste ponta a ponta).

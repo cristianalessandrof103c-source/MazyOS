@@ -1,8 +1,8 @@
 import { useMemo } from 'react'
-import { Link, useParams } from 'react-router-dom'
+import { useParams } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { supabase } from '../../lib/supabase'
-import { useAuth } from '../../contexts/AuthContext'
+import { TenantSidebarLayout } from '../../components/TenantSidebarLayout'
 import { formatarReais } from '../../lib/money'
 import { StatTile } from './StatTile'
 import type { AcquisitionChannel, Deal, Lead } from '../../lib/crm-types'
@@ -19,9 +19,10 @@ const PERIODO_DIAS = 30
 
 export function FinanceiroPage() {
   const { tenantId } = useParams<{ tenantId: string }>()
-  const { signOut } = useAuth()
 
-  const since = useMemo(() => new Date(Date.now() - PERIODO_DIAS * 24 * 3600 * 1000).toISOString(), [])
+  // Truncado pro dia (sem hora) — mesma queryKey que a Visão Geral usa, então navegar entre as
+  // duas páginas reaproveita o cache do TanStack Query em vez de refazer o fetch.
+  const since = useMemo(() => new Date(Date.now() - PERIODO_DIAS * 24 * 3600 * 1000).toISOString().slice(0, 10), [])
 
   const leadsQuery = useQuery({
     queryKey: ['financeiro-leads', tenantId, since],
@@ -120,22 +121,8 @@ export function FinanceiroPage() {
     .filter((row) => row.count > 0 || row.receita > 0)
 
   return (
-    <div className="min-h-screen bg-bg text-text">
-      <header className="flex items-center justify-between border-b border-border px-6 py-4">
-        <div className="flex items-center gap-4">
-          <Link to="/" className="font-display text-lg font-semibold">
-            BK Solutions
-          </Link>
-          <span className="text-text-faint">/</span>
-          <span className="text-sm text-text-dim">Financeiro</span>
-        </div>
-        <button onClick={() => signOut()} className="text-sm text-text-dim hover:text-text">
-          Sair
-        </button>
-      </header>
-
-      <main className="px-6 py-8">
-        <h1 className="font-display text-xl font-semibold">Visão financeira</h1>
+    <TenantSidebarLayout tenantId={tenantId}>
+      <h1 className="font-display text-xl font-semibold">Visão financeira</h1>
         <p className="mt-1 text-sm text-text-dim">
           Leads dos últimos {PERIODO_DIAS} dias · receita e CAC acumulados desde o início.
         </p>
@@ -231,7 +218,6 @@ export function FinanceiroPage() {
             </div>
           </>
         )}
-      </main>
-    </div>
+    </TenantSidebarLayout>
   )
 }

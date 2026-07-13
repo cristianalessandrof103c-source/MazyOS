@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BK Solutions — IA implementada. Marketing que converte.</title>
+<meta name="description" content="BK Solutions implementa IA dentro de empresas B2B e conecta isso a uma máquina de marketing de performance. Um único squad, um único ciclo, resultado medido.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<canvas id="bg-canvas"></canvas>
+<div class="cursor-glow" id="cursorGlow"></div>
+<div class="grain"></div>
+
+<header class="nav" id="nav">
+  <div class="nav-inner">
+    <a href="#top" class="logo">
+      <span class="logo-mark">BK</span>
+      <span class="logo-text">Solutions</span>
+    </a>
+    <nav class="nav-links">
+      <a href="#metodo">Método</a>
+      <a href="#servicos">Serviços</a>
+      <a href="#diferencial">Diferencial</a>
+      <a href="https://wa.me/556376042989?text=Ol%C3%A1%2C%20quero%20agendar%20meu%20diagn%C3%B3stico" class="nav-cta" target="_blank" rel="noopener noreferrer">Falar com a BK</a>
+    </nav>
+    <button class="nav-burger" id="navBurger" aria-label="Abrir menu">
+      <span></span><span></span><span></span>
+    </button>
+  </div>
+</header>
+
+<main id="top">
+
+  <!-- HERO -->
+  <section class="hero">
+    <div class="hero-bg-grid"></div>
+    <div class="container hero-inner">
+      <p class="eyebrow reveal">IMPLEMENTAÇÃO DE IA · MARKETING DE PERFORMANCE</p>
+      <h1 class="hero-title reveal">
+        A maioria vende <span class="strike">IA solta</span>.
+        <br>
+        A BK entrega o <span class="grad-text">motor inteiro</span> rodando.
+      </h1>
+      <p class="hero-sub reveal">
+        Implementamos inteligência artificial dentro da operação da sua empresa
+        e ligamos isso direto na máquina de marketing — site, tráfego pago e dados —
+        que já vem rodando há 5 anos. Sem ferramenta abandonada em uma aba do navegador.
+      </p>
+      <div class="hero-actions reveal">
+        <a href="#contato" class="btn btn-primary magnetic">Diagnosticar minha operação</a>
+        <a href="#metodo" class="btn btn-ghost magnetic">Ver como funciona</a>
+      </div>
+    </div>
+
+    <div class="hero-stats reveal">
+      <div class="stat">
+        <span class="stat-num" data-count="5">0</span><span class="stat-suffix">anos</span>
+        <span class="stat-label">de mercado em marketing digital</span>
+      </div>
+      <div class="stat-divider"></div>
+      <div class="stat">
+        <span class="stat-num" data-count="1">0</span><span class="stat-suffix">squad</span>
+        <span class="stat-label">cuidando de IA e marketing juntos</span>
+      </div>
+      <div class="stat-divider"></div>
+      <div class="stat">
+        <span class="stat-num" data-count="0">0</span><span class="stat-suffix">enrolação</span>
+        <span class="stat-label">diagnóstico, plano e execução — sem terceirizar em pedaços</span>
+      </div>
+    </div>
+
+    <div class="scroll-cue">
+      <span>role</span>
+      <div class="scroll-cue-line"></div>
+    </div>
+  </section>
+
+  <!-- MARQUEE -->
+  <section class="marquee-wrap">
+    <div class="marquee" aria-hidden="true">
+      <span>IMPLEMENTAÇÃO DE IA</span><span>·</span>
+      <span>SITES DE ALTA CONVERSÃO</span><span>·</span>
+      <span>TRÁFEGO PAGO</span><span>·</span>
+      <span>AUTOMAÇÃO DE ATENDIMENTO</span><span>·</span>
+      <span>DADOS QUE VIRAM DECISÃO</span><span>·</span>
+      <span>IMPLEMENTAÇÃO DE IA</span><span>·</span>
+      <span>SITES DE ALTA CONVERSÃO</span><span>·</span>
+      <span>TRÁFEGO PAGO</span><span>·</span>
+      <span>AUTOMAÇÃO DE ATENDIMENTO</span><span>·</span>
+      <span>DADOS QUE VIRAM DECISÃO</span><span>·</span>
+    </div>
+  </section>
+
+  <!-- DIFERENCIAL -->
+  <section class="section" id="diferencial">
+    <div class="container">
+      <p class="section-eyebrow reveal">O PROBLEMA É QUE TODO MUNDO FAZ ISSO</p>
+      <h2 class="section-title reveal">
+        Consultoria de IA implementa e some.<br>
+        Agência de marketing roda anúncio sem entender sua operação.
+        <span class="grad-text">A BK mantém a otimização diária e o suporte que sua empresa precisa dentro de 1 sistema.</span>
+      </h2>
+
+      <div class="split-compare reveal">
+        <div class="compare-col compare-col--bad">
+          <h3>Como o mercado faz</h3>
+          <ul>
+            <li>Consultoria entrega um relatório de IA e desaparece</li>
+            <li>Agência de tráfego otimiza anúncio sem saber o que a operação aguenta entregar</li>
+            <li>Site bonito, mas ninguém conectou isso a dado nenhum</li>
+            <li>Você vira o ponto de integração entre fornecedores que não se falam — e cada um culpa o outro quando o resultado não aparece</li>
+            <li>Dashboards cheios de gráfico, zero decisão que aumente o faturamento</li>
+            <li>O projeto termina na entrega — a evolução da operação fica por sua conta</li>
+            <li>Prometem leads, mas ninguém mede se viraram venda de verdade</li>
+            <li>Ferramenta genérica de prateleira, que ignora estoque, processo e margem do seu negócio</li>
+            <li>Foco em crescer volume, sem olhar pra custo operacional ou lucro no fim do mês</li>
+          </ul>
+        </div>
+        <div class="compare-col compare-col--good">
+          <h3>Como a BK faz</h3>
+          <ul>
+            <li>IA implementada dentro do processo real da empresa, não num piloto isolado que ninguém mantém</li>
+            <li>Tráfego pago dimensionado pela capacidade real de atendimento e entrega da operação</li>
+            <li>Site, tráfego pago e automação nascem sabendo o que a operação precisa vender</li>
+            <li>Um squad, um plano, uma pessoa acompanhando o resultado do início ao fim</li>
+            <li>Cada decisão de marketing usa o mesmo dado que alimenta a IA — pra vender mais, não só pra aparecer bonito</li>
+            <li>Cada ação é medida pelo impacto em venda fechada — não em lead bruto ou clique</li>
+            <li>Sistema especializado sob medida — controle de estoque e operação construídos em cima do que a empresa realmente precisa</li>
+            <li>IA aplicada pra cortar custo operacional e aumentar margem, não só gerar mais atividade</li>
+            <li>Acompanhamento contínuo depois do go-live, ajustando o ciclo junto com a operação</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- MÉTODO -->
+  <section class="section section--alt" id="metodo">
+    <div class="container">
+      <p class="section-eyebrow reveal">MÉTODO</p>
+      <h2 class="section-title reveal">Do diagnóstico ao ciclo que se ajusta sozinho.</h2>
+
+      <div class="steps">
+        <div class="step reveal">
+          <span class="step-num">01</span>
+          <h3>Diagnóstico da operação</h3>
+          <p>Mapeamos onde a IA gera ganho real no seu B2B e onde o marketing atual está deixando dinheiro na mesa. Sem proposta genérica.</p>
+        </div>
+        <div class="step reveal">
+          <span class="step-num">02</span>
+          <h3>Implementação de IA</h3>
+          <p>Colocamos IA rodando dentro do processo — atendimento, qualificação, dados — conectada ao que a empresa já faz, não ao lado dela.</p>
+        </div>
+        <div class="step reveal">
+          <span class="step-num">03</span>
+          <h3>Máquina de marketing</h3>
+          <p>Site, posicionamento e tráfego pago construídos sobre o mesmo dado da operação — para atrair o cliente certo, não qualquer clique.</p>
+        </div>
+        <div class="step reveal">
+          <span class="step-num">04</span>
+          <h3>Ciclo fechado</h3>
+          <p>Resultado de marketing realimenta a IA, a IA melhora a operação, a operação gera mais argumento de marketing. Isso não para.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- SERVIÇOS -->
+  <section class="section" id="servicos">
+    <div class="container">
+      <p class="section-eyebrow reveal">SERVIÇOS</p>
+      <h2 class="section-title reveal">Tudo que sustenta o motor, sob o mesmo teto.</h2>
+
+      <div class="cards">
+        <div class="card reveal">
+          <div class="card-icon" data-icon="ai"></div>
+          <h3>Implementação de IA em B2B</h3>
+          <p>IA aplicada em processos reais — atendimento, qualificação de lead, análise de dados internos — dentro da operação da empresa, com acompanhamento humano.</p>
+        </div>
+        <div class="card reveal">
+          <div class="card-icon" data-icon="site"></div>
+          <h3>Site e landing page de alta conversão</h3>
+          <p>Criação de site pensada para converter tráfego pago, com copy direta ao ponto e estrutura testada — não um cartão de visitas digital.</p>
+        </div>
+        <div class="card reveal">
+          <div class="card-icon" data-icon="ads"></div>
+          <h3>Tráfego pago</h3>
+          <p>Gestão de mídia paga com metas de negócio, não de curtida. Cada real investido é rastreado até a decisão que ele gerou.</p>
+        </div>
+        <div class="card reveal">
+          <div class="card-icon" data-icon="auto"></div>
+          <h3>Automação de atendimento</h3>
+          <p>Primeira resposta, qualificação e agendamento automatizados com IA, sem perder o tom humano da sua marca.</p>
+        </div>
+        <div class="card reveal">
+          <div class="card-icon" data-icon="data"></div>
+          <h3>Dados que viram decisão</h3>
+          <p>Painéis e relatórios que conectam operação e marketing num só lugar, para você decidir com número, não com achismo.</p>
+        </div>
+        <div class="card reveal">
+          <div class="card-icon" data-icon="strategy"></div>
+          <h3>Estratégia sob medida</h3>
+          <p>Nada de pacote fechado. Cada entrega é desenhada para o estágio e o mercado específico da sua empresa B2B.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- CTA -->
+  <section class="section cta-section" id="contato">
+    <div class="container cta-inner">
+      <p class="section-eyebrow reveal">PRÓXIMO PASSO</p>
+      <h2 class="cta-title reveal">
+        Vamos ver onde a IA e o marketing
+        <span class="grad-text">travam dinheiro</span> na sua empresa?
+      </h2>
+      <p class="cta-sub reveal">
+        Uma conversa de 30 minutos, sem enrolação, para entender sua operação
+        e mostrar exatamente onde a BK entraria primeiro.
+      </p>
+
+      <form class="cta-form reveal" id="ctaForm">
+        <div class="form-row">
+          <input type="text" name="nome" placeholder="Seu nome" required>
+          <input type="text" name="empresa" placeholder="Empresa" required>
+        </div>
+        <div class="form-row">
+          <input type="email" name="email" placeholder="E-mail" required>
+          <input type="tel" name="whatsapp" placeholder="WhatsApp" required>
+        </div>
+        <textarea name="mensagem" placeholder="Conte rapidamente o que está travando hoje na operação ou no marketing." rows="3"></textarea>
+        <button type="submit" class="btn btn-primary magnetic btn-block">Quero meu diagnóstico</button>
+        <p class="form-note">Resposta em até 1 dia útil.</p>
+      </form>
+    </div>
+  </section>
+
+</main>
+
+<footer class="footer">
+  <div class="container footer-inner">
+    <div class="logo">
+      <span class="logo-mark">BK</span>
+      <span class="logo-text">Solutions</span>
+    </div>
+    <p>IA implementada + marketing de performance, sob um único ciclo.</p>
+    <p class="footer-copy">© <span id="year"></span> BK Solutions. Todos os direitos reservados.</p>
+  </div>
+</footer>
+
+<script src="script.js"></script>
+</body>
+</html>

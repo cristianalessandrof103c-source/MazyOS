@@ -1,5 +1,5 @@
 // deno-lint-ignore-file no-explicit-any
-// Webhook do WhatsApp Cloud API (Fase 2 — número de teste).
+// Webhook do WhatsApp Cloud API (Fase 2 — número de teste; Fase 6 acrescenta o número real).
 //
 // GET  = handshake de verificação (Meta chama isso ao registrar a URL do webhook).
 // POST = mensagem recebida: resolve tenant via phone_number_id, salva no CRM,
@@ -12,6 +12,7 @@
 import { createClient } from 'npm:@supabase/supabase-js@2'
 import Anthropic from 'npm:@anthropic-ai/sdk'
 import { enviarMensagemTexto } from '../_shared/whatsapp-api.ts'
+import { tokenParaConexao } from '../_shared/whatsapp-tokens.ts'
 import { resolveConversation, resolveLead } from './crm.ts'
 import { runAgentLoop } from './agent.ts'
 
@@ -19,7 +20,6 @@ const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!
 const SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
 const VERIFY_TOKEN = Deno.env.get('WHATSAPP_VERIFY_TOKEN') ?? ''
 const APP_SECRET = Deno.env.get('WHATSAPP_APP_SECRET') ?? ''
-const WHATSAPP_ACCESS_TOKEN = Deno.env.get('WHATSAPP_TEST_ACCESS_TOKEN') ?? ''
 const ANTHROPIC_API_KEY = Deno.env.get('ANTHROPIC_API_KEY') ?? ''
 
 const supabaseAdmin = createClient(SUPABASE_URL, SERVICE_ROLE_KEY)
@@ -52,7 +52,7 @@ async function processInboundMessage(value: any) {
     const phoneNumberId = value.metadata?.phone_number_id
     const { data: connection } = await supabaseAdmin
       .from('whatsapp_connections')
-      .select('id, tenant_id')
+      .select('id, tenant_id, status')
       .eq('phone_number_id', phoneNumberId)
       .maybeSingle()
 
@@ -125,7 +125,7 @@ async function processInboundMessage(value: any) {
     const outboundText = finalText || 'Certo!'
     const waMessageId = await enviarMensagemTexto({
       phoneNumberId,
-      token: WHATSAPP_ACCESS_TOKEN,
+      token: tokenParaConexao(connection.status),
       to: from,
       body: outboundText,
     })

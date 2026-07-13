@@ -1,0 +1,17 @@
+{
+  "name": "bk-solutions-mazyos",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Scripts de automação do MazyOS (carrossel, Meta Graph API, fila do Instagram).",
+  "type": "commonjs",
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.110.1",
+    "dotenv": "^16.4.5",
+    "marked": "^18.0.5",
+    "node-fetch": "^2.7.0",
+    "playwright": "^1.48.0"
+  }
+}

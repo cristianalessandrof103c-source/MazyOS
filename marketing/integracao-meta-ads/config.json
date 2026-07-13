@@ -1,0 +1,53 @@
+{
+  "_comentario": "Regras travadas da automação de Meta Ads. O script scripts/otimizar-meta-ads.js lê este arquivo e NÃO executa nenhuma ação fora destes limites sem aprovação manual. Editar aqui é a única forma de mudar o comportamento — não é pra Claude 'decidir' um número diferente na hora.",
+
+  "conta": {
+    "ad_account_id": "1928356298123181",
+    "page_id": "1161295040406818",
+    "whatsapp_phone_number": "556376042989",
+    "moeda": "BRL"
+  },
+
+  "objetivo": {
+    "tipo": "click_to_whatsapp",
+    "campaign_objective": "OUTCOME_ENGAGEMENT",
+    "optimization_goal": "CONVERSATIONS",
+    "action_type_resultado": "onsite_conversion.messaging_conversation_started_7d",
+    "_nota": "action_type_resultado precisa ser conferido no primeiro teste real — a Meta já renomeou esse action_type antes entre versões da API."
+  },
+
+  "orcamento": {
+    "orcamento_diario_inicial_reais": 50,
+    "limite_max_absoluto_diario_reais": 250,
+    "_nota_limite": "Teto absoluto (5x o inicial). Acima disso o script NUNCA aumenta sozinho, não importa a performance — precisa de aprovação manual explícita."
+  },
+
+  "escalonamento": {
+    "ativo": true,
+    "percentual_max_aumento_por_vez": 20,
+    "intervalo_minimo_entre_aumentos_horas": 24,
+    "dias_consecutivos_estaveis_minimo": 3,
+    "resultados_acumulados_minimo": 10,
+    "variacao_cpa_maxima_para_considerar_estavel_pct": 15,
+    "_nota": "Só escala se: >=3 dias seguidos com CPA dentro de 15% de variação entre si, E >=10 resultados acumulados no período, E fazem >=24h desde o último aumento. Aumento nunca passa de 20% do orçamento atual."
+  },
+
+  "kill_switch": {
+    "ativo": true,
+    "cpa_alvo_reais": null,
+    "multiplicador_cpa_alvo_sem_resultado": 2,
+    "percentual_budget_diario_sem_resultado_precoce": 50,
+    "janela_horas_verificacao_precoce": 6,
+    "_nota": "Pausa automática se acontecer QUALQUER UM dos dois: (a) gasto >= cpa_alvo_reais * 2 sem nenhum resultado no período — só ativa quando cpa_alvo_reais for preenchido com um valor real; (b) gasto >= 50% do orçamento diário nas primeiras 6h sem nenhum resultado. Enquanto cpa_alvo_reais for null, só a regra (b) roda — script deve avisar disso a cada execução."
+  },
+
+  "alertas": {
+    "frequencia_maxima": 3.0,
+    "_nota": "Acima de 3.0 alerta de saturação de público (não pausa sozinho, só avisa)."
+  },
+
+  "modo_execucao": {
+    "dry_run_padrao": true,
+    "_nota": "Enquanto true, o script só simula e relata o que faria — não muda orçamento nem pausa nada de verdade. Rodar em dry-run por pelo menos alguns dias antes de destravar (--aplicar) e confiar a automação de verdade."
+  }
+}
