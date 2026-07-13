@@ -25,10 +25,10 @@ receita × gasto/dia, leads por canal), pronta e validada. Fase 8 (Prospecção,
 (New) — nome, endereço, telefone, site, e Instagram/LinkedIn extraídos do site do
 próprio prospect (best-effort). Fica num funil separado do CRM (`prospects`, tabela
 nova); só quando qualificado manualmente vira lead de verdade via RPC
-`convert_prospect_to_lead`. Falta configurar a credencial pra funcionar de verdade (ver
-"O que pode esperar" abaixo) — código pronto, não testado ponta a ponta ainda (ambiente
-sem Node.js instalado impediu rodar o typecheck do frontend). Detalhes de cada fase em
-`sistema/README.md`.
+`convert_prospect_to_lead`. **Testada ponta a ponta em produção (2026-07-13) e
+funcionando**: migration aplicada via SQL Editor do Supabase, Edge Function deployada
+pelo painel web (sem CLI, sem Node.js local), frontend publicado no Netlify
+(`exquisite-babka-18957a.netlify.app`). Detalhes de cada fase em `sistema/README.md`.
 
 ## O que pode esperar
 
@@ -36,8 +36,7 @@ sem Node.js instalado impediu rodar o typecheck do frontend). Detalhes de cada f
 - **Token permanente do WhatsApp** — o temporário usado na Fase 2 expirou em 24h (achado ao testar a Fase 3). Precisa gerar um permanente via System User `bkads` antes de qualquer envio real (agente ou follow-up) funcionar.
 - **Chave da Voyage AI** (voyageai.com) — necessária pra Fase 4 gerar embeddings de verdade (retrieval do cérebro coletivo). Sem ela o resto do pipeline funciona (extrai insight, grava rascunho), só não embeda.
 - **Template pré-aprovado pela Meta** — sem isso, o follow-up de "lead sem resposta" (Fase 3) quase sempre encontra a janela de 24h já fechada quando tenta enviar (limitação real da Cloud API, não bug).
-- **Chave da Google Places API (New)** (`GOOGLE_PLACES_API_KEY`, console.cloud.google.com — precisa billing habilitado e ativar especificamente "Places API (New)", não a legada) — necessária pra Fase 8 (Prospecção) buscar prospects de verdade. Setar com `npx supabase secrets set GOOGLE_PLACES_API_KEY=...` dentro de `sistema/`.
-- **Node.js instalado neste ambiente** — não há `node`/`npm`/`npx` disponível aqui (verificado 2026-07-13), então não dá pra rodar typecheck/build/deploy do `sistema/` direto por essa via. Rodar esses comandos numa máquina/terminal com Node.js instalado.
+- **Node.js instalado neste ambiente** — não há `node`/`npm`/`npx` disponível aqui (verificado 2026-07-13), então não dá pra rodar typecheck/build/deploy do `sistema/` direto por essa via. Na prática isso não bloqueou nada: migrations e Edge Functions dão pra aplicar 100% pelo painel web do Supabase (SQL Editor + Edge Functions → Via Editor), e o frontend builda sozinho no Netlify a partir do push no GitHub — só rodar `npm run dev` local que fica indisponível aqui.
 
 ## Contexto com prazo
 

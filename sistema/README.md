@@ -328,17 +328,32 @@ de verdade.
   busca (nicho + região), lista de prospects com filtro por status, `<select>` de
   status por prospect e botão "Converter em lead".
 
-### Pendente
+### Status (2026-07-13) — testado ponta a ponta, funcionando
 
-- **`GOOGLE_PLACES_API_KEY`** — sem essa secret (`npx supabase secrets set
-  GOOGLE_PLACES_API_KEY=...`), a função responde com erro claro em vez de buscar de
-  verdade. Precisa billing habilitado no Google Cloud do usuário e a **"Places API
-  (New)"** especificamente ativada (produto diferente da Places API legada).
-- Aplicar a migration no projeto hospedado (`npx supabase db push`) e fazer deploy da
-  função (`npx supabase functions deploy prospeccao-buscar`).
-- Não testado ponta a ponta ainda — o ambiente onde isso foi implementado não tinha
-  Node.js instalado, então não deu pra rodar typecheck/build nem `npm run dev` pra
-  confirmar visualmente antes de entregar.
+Deploy feito direto pelo painel do Supabase (Dashboard → Edge Functions → Deploy a new
+function → **Via Editor**, sem CLI — o ambiente onde isso foi implementado não tinha
+Node.js instalado). Frontend publicado no Netlify (`netlify.toml` na raiz do repo, base
+`sistema/`, redirect de SPA). Duas pegadinhas encontradas e corrigidas nesse processo,
+relevantes pra qualquer Edge Function futura chamada pelo dashboard:
+
+- **CORS: falta `x-client-info` no `Access-Control-Allow-Headers`.** O `supabase-js`
+  manda esse header em toda chamada; sem ele na lista, o preflight (OPTIONS) responde
+  204 normalmente mas o navegador bloqueia a chamada real (POST) com "No
+  'Access-Control-Allow-Origin' header is present" — sintoma enganoso, parece erro de
+  origin mas é header faltando. Corrigido em `prospeccao-buscar`, `hub-instagram-publish`
+  e `invite-member`.
+- **Google Places API: restrição de "HTTP referrer" na chave não funciona pra chamada
+  server-side.** Chave criada com "Application restrictions: Websites" rejeita
+  requisições da Edge Function com `Requests from referer <empty> are blocked` (a
+  function não manda header Referer). Precisa "Application restrictions: None" +
+  restringir só por **API restrictions** (Places API (New)).
+- Deploy manual pelo editor do Supabase tem UI própria pra nome/slug da function — o
+  campo de "renomear" depois de criada só muda o nome de exibição, não o slug real da
+  rota (`/functions/v1/<slug>`). Se o nome ficar errado, é mais simples ajustar a
+  chamada `supabase.functions.invoke(...)` no frontend pro slug real do que tentar
+  renomear a function.
+
+Migration `0010_prospeccao.sql` aplicada via SQL Editor do Supabase (sem CLI).
 
 ## Rodando localmente
 
@@ -354,5 +369,5 @@ Ver roadmap completo no plano. Em ordem: CRM manual (pronto) → WhatsApp sandbo
 (pronto, aguardando chave da Voyage) → hub de integrações do MazyOS (pronto, aguardando
 credenciais do Meta) → corte pro WhatsApp real (bloqueado, aguardando verificação da Meta) →
 white-label multi-tenant completo (convite self-service + branding prontos; Embedded Signup do
-WhatsApp, OAuth de ads e billing de verdade seguem pendentes) → prospecção (pronto, aguardando
-chave da Google Places API e teste ponta a ponta).
+WhatsApp, OAuth de ads e billing de verdade seguem pendentes) → prospecção (pronto e
+testado ponta a ponta em produção, 2026-07-13).
