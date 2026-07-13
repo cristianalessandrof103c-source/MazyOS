@@ -4,12 +4,15 @@
 // prospeccao_jobs por vez: consome células da grade a partir de next_cell_index, dentro
 // de um orçamento de tempo por execução, até atingir target_count ou esgotar a grade.
 //
+// Arquivo autocontido de propósito (sem import de _shared/) — mesmo motivo de
+// prospeccao-buscar/index.ts: o editor web do Supabase deploya uma function por vez,
+// sem suporte a pasta compartilhada entre functions diferentes.
+//
 // Protegido por header secreto (não JWT — quem chama é pg_net, não um usuário
 // autenticado), reaproveitando o mesmo secret já usado por follow-up-dispatcher/
 // sync-ad-spend (Vault: dispatcher_secret).
 
 import { createClient } from 'npm:@supabase/supabase-js@2'
-import { buscarPlaces, extrairRedesSociais, MAX_PER_PAGE, type GridCell } from '../_shared/google-places.ts'
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!
 const SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
@@ -19,17 +22,83 @@ const DISPATCHER_SECRET = Deno.env.get('DISPATCHER_SECRET') ?? ''
 const supabaseAdmin = createClient(SUPABASE_URL, SERVICE_ROLE_KEY)
 
 const TIME_BUDGET_MS = 100_000
+const MAX_PER_PAGE = 20
+
+const PLACES_FIELD_MASK = [
+  'places.id',
+  'places.displayName',
+  'places.formattedAddress',
+  'places.internationalPhoneNumber',
+  'places.websiteUri',
+  'places.googleMapsUri',
+  'places.location',
+  'places.businessStatus',
+  'nextPageToken',
+].join(',')
+
+type PlaceResult = {
+  id: string
+  displayName?: { text?: string }
+  formattedAddress?: string
+  internationalPhoneNumber?: string
+  websiteUri?: string
+  googleMapsUri?: string
+  location?: { latitude?: number; longitude?: number }
+}
+
+type GridCell = { lat: number; lng: number; radius_m: number }
 
 function jsonResponse(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json' } })
 }
 
-async function processarCelula(job: any, cell: GridCell) {
-  const places = await buscarPlaces(GOOGLE_PLACES_API_KEY, `${job.niche} em ${job.region}`, MAX_PER_PAGE, {
-    lat: cell.lat,
-    lng: cell.lng,
-    radius_m: cell.radius_m,
+async function buscarPlacesNaCelula(textQuery: string, cell: GridCell): Promise<PlaceResult[]> {
+  const res = await fetch('https://places.googleapis.com/v1/places:searchText', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-Goog-Api-Key': GOOGLE_PLACES_API_KEY,
+      'X-Goog-FieldMask': PLACES_FIELD_MASK,
+    },
+    body: JSON.stringify({
+      textQuery,
+      languageCode: 'pt-BR',
+      maxResultCount: MAX_PER_PAGE,
+      locationBias: {
+        circle: { center: { latitude: cell.lat, longitude: cell.lng }, radius: cell.radius_m },
+      },
+    }),
   })
+
+  const data = await res.json()
+  if (!res.ok) {
+    throw new Error(data?.error?.message ?? `Places API respondeu ${res.status}`)
+  }
+  return (data.places ?? []) as PlaceResult[]
+}
+
+async function extrairRedesSociais(websiteUri: string): Promise<{ instagram_url: string | null; linkedin_url: string | null }> {
+  const INSTAGRAM_REGEX = /https?:\/\/(?:www\.)?instagram\.com\/(?!explore\/|accounts\/|p\/|reel\/|stories\/)[a-zA-Z0-9_.]+/i
+  const LINKEDIN_REGEX = /https?:\/\/(?:www\.)?linkedin\.com\/(?:company|in)\/[a-zA-Z0-9\-_%]+/i
+
+  const controller = new AbortController()
+  const timeout = setTimeout(() => controller.abort(), 6000)
+  try {
+    const res = await fetch(websiteUri, { signal: controller.signal })
+    const html = (await res.text()).slice(0, 500_000)
+    return {
+      instagram_url: html.match(INSTAGRAM_REGEX)?.[0] ?? null,
+      linkedin_url: html.match(LINKEDIN_REGEX)?.[0] ?? null,
+    }
+  } catch {
+    return { instagram_url: null, linkedin_url: null }
+  } finally {
+    clearTimeout(timeout)
+  }
+}
+
+async function processarCelula(job: any, cell: GridCell) {
+  const places = await buscarPlacesNaCelula(`${job.niche} em ${job.region}`, cell)
 
   const enriquecidos = await Promise.allSettled(
     places.map(async (place) => {

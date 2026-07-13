@@ -8,12 +8,15 @@
 // só — geocodifica a região, gera uma grade de sub-áreas e cria um job em
 // prospeccao_jobs, processado aos poucos pelo prospeccao-worker (chamado por pg_cron).
 //
+// Arquivo autocontido de propósito (sem import de _shared/) — deployada pelo editor web
+// do Supabase, que lida com uma function por vez, não com pastas compartilhadas entre
+// functions. prospeccao-worker/index.ts duplica esse mesmo bloco da Places API.
+//
 // Chamada direto pelo dashboard autenticado (supabase.functions.invoke), mesmo padrão de
 // hub-instagram-publish/invite-member: mantém verificação de JWT padrão (deploy sem
 // --no-verify-jwt).
 
 import { createClient } from 'npm:@supabase/supabase-js@2'
-import { buscarPlaces, extrairRedesSociais, geocodificarRegiao, gerarGrade } from '../_shared/google-places.ts'
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!
 const SUPABASE_ANON_KEY = Deno.env.get('SUPABASE_ANON_KEY')!
@@ -25,6 +28,33 @@ const supabaseAdmin = createClient(SUPABASE_URL, SERVICE_ROLE_KEY)
 const SYNC_MAX_RESULTS = 60
 const MAX_GRID_CELLS = 60
 const RESULTS_PER_CELL_ESTIMATE = 15 // estimativa conservadora de resultados únicos por célula, pra dimensionar a grade
+const MAX_PER_PAGE = 20
+const EARTH_METERS_PER_DEGREE_LAT = 111_320
+
+const PLACES_FIELD_MASK = [
+  'places.id',
+  'places.displayName',
+  'places.formattedAddress',
+  'places.internationalPhoneNumber',
+  'places.websiteUri',
+  'places.googleMapsUri',
+  'places.location',
+  'places.businessStatus',
+  'nextPageToken',
+].join(',')
+
+type PlaceResult = {
+  id: string
+  displayName?: { text?: string }
+  formattedAddress?: string
+  internationalPhoneNumber?: string
+  websiteUri?: string
+  googleMapsUri?: string
+  location?: { latitude?: number; longitude?: number }
+}
+
+type GridCell = { lat: number; lng: number; radius_m: number }
+type Viewport = { north: number; south: number; east: number; west: number }
 
 const CORS_HEADERS = {
   'Access-Control-Allow-Origin': '*',
@@ -39,8 +69,112 @@ function jsonResponse(body: unknown, status = 200) {
   })
 }
 
+async function chamarSearchText(body: Record<string, unknown>): Promise<{ places: PlaceResult[]; nextPageToken?: string }> {
+  const res = await fetch('https://places.googleapis.com/v1/places:searchText', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-Goog-Api-Key': GOOGLE_PLACES_API_KEY,
+      'X-Goog-FieldMask': PLACES_FIELD_MASK,
+    },
+    body: JSON.stringify(body),
+  })
+
+  const data = await res.json()
+  if (!res.ok) {
+    throw new Error(data?.error?.message ?? `Places API respondeu ${res.status}`)
+  }
+  return { places: (data.places ?? []) as PlaceResult[], nextPageToken: data.nextPageToken }
+}
+
+async function buscarPlaces(textQuery: string, targetCount: number): Promise<PlaceResult[]> {
+  const results: PlaceResult[] = []
+  let pageToken: string | undefined
+  const maxPages = 3
+
+  for (let page = 0; page < maxPages && results.length < targetCount; page++) {
+    const body: Record<string, unknown> = { textQuery, languageCode: 'pt-BR', maxResultCount: MAX_PER_PAGE }
+    if (pageToken) body.pageToken = pageToken
+
+    const { places, nextPageToken } = await chamarSearchText(body)
+    results.push(...places)
+
+    if (!nextPageToken) break
+    pageToken = nextPageToken
+    // o token só fica válido depois de um pequeno delay — exigência conhecida do Google
+    await new Promise((resolve) => setTimeout(resolve, 2000))
+  }
+
+  return results.slice(0, targetCount)
+}
+
+async function extrairRedesSociais(websiteUri: string): Promise<{ instagram_url: string | null; linkedin_url: string | null }> {
+  const INSTAGRAM_REGEX = /https?:\/\/(?:www\.)?instagram\.com\/(?!explore\/|accounts\/|p\/|reel\/|stories\/)[a-zA-Z0-9_.]+/i
+  const LINKEDIN_REGEX = /https?:\/\/(?:www\.)?linkedin\.com\/(?:company|in)\/[a-zA-Z0-9\-_%]+/i
+
+  const controller = new AbortController()
+  const timeout = setTimeout(() => controller.abort(), 6000)
+  try {
+    const res = await fetch(websiteUri, { signal: controller.signal })
+    const html = (await res.text()).slice(0, 500_000)
+    return {
+      instagram_url: html.match(INSTAGRAM_REGEX)?.[0] ?? null,
+      linkedin_url: html.match(LINKEDIN_REGEX)?.[0] ?? null,
+    }
+  } catch {
+    return { instagram_url: null, linkedin_url: null }
+  } finally {
+    clearTimeout(timeout)
+  }
+}
+
+async function geocodificarRegiao(region: string): Promise<Viewport | null> {
+  const url = `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(region)}&key=${GOOGLE_PLACES_API_KEY}`
+  const res = await fetch(url)
+  const data = await res.json()
+  if (data.status !== 'OK' || !data.results?.[0]) return null
+  const viewport = data.results[0].geometry?.viewport
+  if (!viewport) return null
+  return {
+    north: viewport.northeast.lat,
+    south: viewport.southwest.lat,
+    east: viewport.northeast.lng,
+    west: viewport.southwest.lng,
+  }
+}
+
+function gerarGrade(viewport: Viewport, maxCells: number): GridCell[] {
+  const centerLat = (viewport.north + viewport.south) / 2
+  const heightMeters = Math.max(1, (viewport.north - viewport.south) * EARTH_METERS_PER_DEGREE_LAT)
+  const metersPerDegreeLng = EARTH_METERS_PER_DEGREE_LAT * Math.cos((centerLat * Math.PI) / 180)
+  const widthMeters = Math.max(1, (viewport.east - viewport.west) * metersPerDegreeLng)
+
+  const aspectRatio = widthMeters / heightMeters
+  let rows = Math.max(1, Math.round(Math.sqrt(maxCells / aspectRatio)))
+  let cols = Math.max(1, Math.round(maxCells / rows))
+  while (rows * cols > maxCells && (rows > 1 || cols > 1)) {
+    if (rows >= cols && rows > 1) rows--
+    else if (cols > 1) cols--
+    else break
+  }
+
+  const cellHeightMeters = heightMeters / rows
+  const cellWidthMeters = widthMeters / cols
+  const radiusM = Math.max(1000, Math.min(50_000, Math.ceil((Math.max(cellWidthMeters, cellHeightMeters) / 2) * 1.2)))
+
+  const cells: GridCell[] = []
+  for (let i = 0; i < rows; i++) {
+    for (let j = 0; j < cols; j++) {
+      const lat = viewport.south + ((i + 0.5) * heightMeters) / rows / EARTH_METERS_PER_DEGREE_LAT
+      const lng = viewport.west + ((j + 0.5) * widthMeters) / cols / metersPerDegreeLng
+      cells.push({ lat, lng, radius_m: radiusM })
+    }
+  }
+  return cells
+}
+
 async function buscaSincrona(tenantId: string, niche: string, region: string, targetCount: number) {
-  const places = await buscarPlaces(GOOGLE_PLACES_API_KEY, `${niche} em ${region}`, targetCount)
+  const places = await buscarPlaces(`${niche} em ${region}`, targetCount)
 
   const enriquecidos = await Promise.allSettled(
     places.map(async (place) => {
@@ -87,7 +221,7 @@ async function buscaSincrona(tenantId: string, niche: string, region: string, ta
 }
 
 async function criarJobDeLote(tenantId: string, niche: string, region: string, targetCount: number) {
-  const viewport = await geocodificarRegiao(GOOGLE_PLACES_API_KEY, region)
+  const viewport = await geocodificarRegiao(region)
   if (!viewport) {
     return jsonResponse({ error: `Não consegui geocodificar a região "${region}".` }, 400)
   }
