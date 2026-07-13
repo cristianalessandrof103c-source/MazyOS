@@ -15,7 +15,7 @@ const ALLOWED_ROLES = ['tenant_admin', 'tenant_manager', 'tenant_agent', 'tenant
 
 const CORS_HEADERS = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, apikey, content-type',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
 }
 
