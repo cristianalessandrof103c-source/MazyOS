@@ -39,7 +39,9 @@ export function ProspeccaoPage() {
 
   const searchMutation = useMutation({
     mutationFn: async () => {
-      const { data, error } = await supabase.functions.invoke('prospeccao-buscar', {
+      // Nome real da function no Supabase ficou "super-function" (o painel web só deixou
+      // editar o nome de exibição, não o slug, na primeira vez que foi deployada por lá).
+      const { data, error } = await supabase.functions.invoke('super-function', {
         body: { tenant_id: tenantId, niche: niche.trim(), region: region.trim() },
       })
       if (error) throw new Error(await extrairErroFuncao(error))
