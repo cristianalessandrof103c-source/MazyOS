@@ -3,11 +3,17 @@
 // pra quem tiver site, tenta extrair Instagram/LinkedIn do próprio HTML público do
 // prospect (best-effort, nunca bloqueia o resultado da busca).
 //
+// target_count <= SYNC_MAX_RESULTS: busca síncrona (com paginação), responde na hora.
+// target_count > SYNC_MAX_RESULTS: a Places API não devolve tanto resultado numa busca
+// só — geocodifica a região, gera uma grade de sub-áreas e cria um job em
+// prospeccao_jobs, processado aos poucos pelo prospeccao-worker (chamado por pg_cron).
+//
 // Chamada direto pelo dashboard autenticado (supabase.functions.invoke), mesmo padrão de
 // hub-instagram-publish/invite-member: mantém verificação de JWT padrão (deploy sem
 // --no-verify-jwt).
 
 import { createClient } from 'npm:@supabase/supabase-js@2'
+import { buscarPlaces, extrairRedesSociais, geocodificarRegiao, gerarGrade } from '../_shared/google-places.ts'
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!
 const SUPABASE_ANON_KEY = Deno.env.get('SUPABASE_ANON_KEY')!
@@ -16,23 +22,9 @@ const GOOGLE_PLACES_API_KEY = Deno.env.get('GOOGLE_PLACES_API_KEY') ?? ''
 
 const supabaseAdmin = createClient(SUPABASE_URL, SERVICE_ROLE_KEY)
 
-const MAX_RESULTS = 20
-const SITE_FETCH_TIMEOUT_MS = 6000
-const SITE_FETCH_MAX_CHARS = 500_000
-
-const PLACES_FIELD_MASK = [
-  'places.id',
-  'places.displayName',
-  'places.formattedAddress',
-  'places.internationalPhoneNumber',
-  'places.websiteUri',
-  'places.googleMapsUri',
-  'places.location',
-  'places.businessStatus',
-].join(',')
-
-const INSTAGRAM_REGEX = /https?:\/\/(?:www\.)?instagram\.com\/(?!explore\/|accounts\/|p\/|reel\/|stories\/)[a-zA-Z0-9_.]+/i
-const LINKEDIN_REGEX = /https?:\/\/(?:www\.)?linkedin\.com\/(?:company|in)\/[a-zA-Z0-9\-_%]+/i
+const SYNC_MAX_RESULTS = 60
+const MAX_GRID_CELLS = 60
+const RESULTS_PER_CELL_ESTIMATE = 15 // estimativa conservadora de resultados únicos por célula, pra dimensionar a grade
 
 const CORS_HEADERS = {
   'Access-Control-Allow-Origin': '*',
@@ -47,50 +39,80 @@ function jsonResponse(body: unknown, status = 200) {
   })
 }
 
-type PlaceResult = {
-  id: string
-  displayName?: { text?: string }
-  formattedAddress?: string
-  internationalPhoneNumber?: string
-  websiteUri?: string
-  googleMapsUri?: string
-  location?: { latitude?: number; longitude?: number }
+async function buscaSincrona(tenantId: string, niche: string, region: string, targetCount: number) {
+  const places = await buscarPlaces(GOOGLE_PLACES_API_KEY, `${niche} em ${region}`, targetCount)
+
+  const enriquecidos = await Promise.allSettled(
+    places.map(async (place) => {
+      const redes = place.websiteUri
+        ? await extrairRedesSociais(place.websiteUri)
+        : { instagram_url: null, linkedin_url: null }
+
+      return {
+        tenant_id: tenantId,
+        place_id: place.id,
+        name: place.displayName?.text ?? '(sem nome)',
+        formatted_address: place.formattedAddress ?? null,
+        phone_number: place.internationalPhoneNumber ?? null,
+        website: place.websiteUri ?? null,
+        instagram_url: redes.instagram_url,
+        linkedin_url: redes.linkedin_url,
+        google_maps_url: place.googleMapsUri ?? null,
+        latitude: place.location?.latitude ?? null,
+        longitude: place.location?.longitude ?? null,
+        search_niche: niche,
+        search_region: region,
+      }
+    }),
+  )
+
+  const rows = enriquecidos
+    .filter((r): r is PromiseFulfilledResult<Record<string, unknown>> => r.status === 'fulfilled')
+    .map((r) => r.value)
+
+  if (rows.length === 0) {
+    return jsonResponse({ ok: true, mode: 'sync', count: 0, prospects: [] })
+  }
+
+  const { data: prospects, error: upsertError } = await supabaseAdmin
+    .from('prospects')
+    .upsert(rows, { onConflict: 'tenant_id,place_id' })
+    .select()
+
+  if (upsertError) {
+    return jsonResponse({ error: `Falha ao salvar prospects: ${upsertError.message}` }, 500)
+  }
+
+  return jsonResponse({ ok: true, mode: 'sync', count: prospects?.length ?? 0, prospects })
 }
 
-async function buscarPlaces(textQuery: string, maxResultCount: number): Promise<PlaceResult[]> {
-  const res = await fetch('https://places.googleapis.com/v1/places:searchText', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'X-Goog-Api-Key': GOOGLE_PLACES_API_KEY,
-      'X-Goog-FieldMask': PLACES_FIELD_MASK,
-    },
-    body: JSON.stringify({ textQuery, languageCode: 'pt-BR', maxResultCount }),
-  })
-
-  const data = await res.json()
-  if (!res.ok) {
-    throw new Error(data?.error?.message ?? `Places API respondeu ${res.status}`)
+async function criarJobDeLote(tenantId: string, niche: string, region: string, targetCount: number) {
+  const viewport = await geocodificarRegiao(GOOGLE_PLACES_API_KEY, region)
+  if (!viewport) {
+    return jsonResponse({ error: `Não consegui geocodificar a região "${region}".` }, 400)
   }
-  return (data.places ?? []) as PlaceResult[]
-}
 
-async function extrairRedesSociais(websiteUri: string): Promise<{ instagram_url: string | null; linkedin_url: string | null }> {
-  const controller = new AbortController()
-  const timeout = setTimeout(() => controller.abort(), SITE_FETCH_TIMEOUT_MS)
-  try {
-    const res = await fetch(websiteUri, { signal: controller.signal })
-    const html = (await res.text()).slice(0, SITE_FETCH_MAX_CHARS)
-    return {
-      instagram_url: html.match(INSTAGRAM_REGEX)?.[0] ?? null,
-      linkedin_url: html.match(LINKEDIN_REGEX)?.[0] ?? null,
-    }
-  } catch {
-    // site fora do ar, timeout, HTML sem match etc — enriquecimento é best-effort
-    return { instagram_url: null, linkedin_url: null }
-  } finally {
-    clearTimeout(timeout)
+  const cellCount = Math.min(MAX_GRID_CELLS, Math.max(1, Math.ceil(targetCount / RESULTS_PER_CELL_ESTIMATE)))
+  const gridCells = gerarGrade(viewport, cellCount)
+
+  const { data: job, error: insertError } = await supabaseAdmin
+    .from('prospeccao_jobs')
+    .insert({
+      tenant_id: tenantId,
+      niche,
+      region,
+      target_count: targetCount,
+      grid_cells: gridCells,
+      status: 'processing',
+    })
+    .select()
+    .single()
+
+  if (insertError) {
+    return jsonResponse({ error: `Falha ao criar job de extração: ${insertError.message}` }, 500)
   }
+
+  return jsonResponse({ ok: true, mode: 'job', job_id: job.id })
 }
 
 Deno.serve(async (req: Request) => {
@@ -118,15 +140,15 @@ Deno.serve(async (req: Request) => {
   const tenantId = body.tenant_id as string | undefined
   const niche = (body.niche as string | undefined)?.trim()
   const region = (body.region as string | undefined)?.trim()
-  const maxResults = Math.min(Number(body.max_results) || MAX_RESULTS, MAX_RESULTS)
+  const targetCount = Math.min(1000, Math.max(1, Number(body.target_count) || 20))
 
   if (!tenantId || !niche || !region) {
     return jsonResponse({ error: 'Esperado { tenant_id, niche, region }' }, 400)
   }
 
   // Client com o JWT de quem chamou: só pra checar que o usuário pertence ao tenant. A
-  // escrita em si sempre passa por supabaseAdmin (service role), já que prospects não
-  // tem policy de insert liberada pro client.
+  // escrita em si sempre passa por supabaseAdmin (service role), já que prospects/
+  // prospeccao_jobs não têm policy de insert liberada pro client.
   const supabaseUser = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
     global: { headers: { Authorization: req.headers.get('Authorization') ?? '' } },
   })
@@ -158,53 +180,12 @@ Deno.serve(async (req: Request) => {
     }
   }
 
-  let places: PlaceResult[]
   try {
-    places = await buscarPlaces(`${niche} em ${region}`, maxResults)
+    if (targetCount <= SYNC_MAX_RESULTS) {
+      return await buscaSincrona(tenantId, niche, region, targetCount)
+    }
+    return await criarJobDeLote(tenantId, niche, region, targetCount)
   } catch (err) {
     return jsonResponse({ error: `Falha ao consultar a Google Places API: ${(err as Error).message}` }, 502)
   }
-
-  const enriquecidos = await Promise.allSettled(
-    places.map(async (place) => {
-      const redes = place.websiteUri
-        ? await extrairRedesSociais(place.websiteUri)
-        : { instagram_url: null, linkedin_url: null }
-
-      return {
-        tenant_id: tenantId,
-        place_id: place.id,
-        name: place.displayName?.text ?? '(sem nome)',
-        formatted_address: place.formattedAddress ?? null,
-        phone_number: place.internationalPhoneNumber ?? null,
-        website: place.websiteUri ?? null,
-        instagram_url: redes.instagram_url,
-        linkedin_url: redes.linkedin_url,
-        google_maps_url: place.googleMapsUri ?? null,
-        latitude: place.location?.latitude ?? null,
-        longitude: place.location?.longitude ?? null,
-        search_niche: niche,
-        search_region: region,
-      }
-    }),
-  )
-
-  const rows = enriquecidos
-    .filter((r): r is PromiseFulfilledResult<Record<string, unknown>> => r.status === 'fulfilled')
-    .map((r) => r.value)
-
-  if (rows.length === 0) {
-    return jsonResponse({ ok: true, count: 0, prospects: [] })
-  }
-
-  const { data: prospects, error: upsertError } = await supabaseAdmin
-    .from('prospects')
-    .upsert(rows, { onConflict: 'tenant_id,place_id' })
-    .select()
-
-  if (upsertError) {
-    return jsonResponse({ error: `Falha ao salvar prospects: ${upsertError.message}` }, 500)
-  }
-
-  return jsonResponse({ ok: true, count: prospects?.length ?? 0, prospects })
 })

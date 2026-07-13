@@ -100,6 +100,22 @@ export type Prospect = {
   created_at: string
 }
 
+export type ProspeccaoJobStatus = 'processing' | 'done' | 'failed'
+
+export type ProspeccaoJob = {
+  id: string
+  tenant_id: string
+  niche: string
+  region: string
+  target_count: number
+  status: ProspeccaoJobStatus
+  grid_cells: { lat: number; lng: number; radius_m: number }[]
+  next_cell_index: number
+  found_count: number
+  error: string | null
+  created_at: string
+}
+
 export type MembershipRole = 'tenant_admin' | 'tenant_manager' | 'tenant_agent' | 'tenant_viewer'
 export type MembershipStatus = 'invited' | 'active' | 'disabled'
 

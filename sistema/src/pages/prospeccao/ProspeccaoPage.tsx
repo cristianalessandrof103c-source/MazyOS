@@ -1,11 +1,13 @@
-import { useState, type FormEvent } from 'react'
+import { useEffect, useState, type FormEvent } from 'react'
 import { useParams } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '../../lib/supabase'
 import { TenantSidebarLayout } from '../../components/TenantSidebarLayout'
 import { extrairErroFuncao } from '../../lib/functions-error'
 import { ProspectRow } from './ProspectRow'
-import type { Prospect, ProspectStatus } from '../../lib/crm-types'
+import type { Prospect, ProspectStatus, ProspeccaoJob } from '../../lib/crm-types'
+
+const SYNC_MAX_RESULTS = 60
 
 const STATUS_FILTER_LABEL: Record<'all' | ProspectStatus, string> = {
   all: 'Todos',
@@ -21,6 +23,8 @@ export function ProspeccaoPage() {
   const queryClient = useQueryClient()
   const [niche, setNiche] = useState('')
   const [region, setRegion] = useState('')
+  const [targetCount, setTargetCount] = useState(20)
+  const [jobId, setJobId] = useState<string | null>(null)
   const [statusFilter, setStatusFilter] = useState<'all' | ProspectStatus>('all')
 
   const prospectsQuery = useQuery({
@@ -42,14 +46,38 @@ export function ProspeccaoPage() {
       // Nome real da function no Supabase ficou "super-function" (o painel web só deixou
       // editar o nome de exibição, não o slug, na primeira vez que foi deployada por lá).
       const { data, error } = await supabase.functions.invoke('super-function', {
-        body: { tenant_id: tenantId, niche: niche.trim(), region: region.trim() },
+        body: { tenant_id: tenantId, niche: niche.trim(), region: region.trim(), target_count: targetCount },
       })
       if (error) throw new Error(await extrairErroFuncao(error))
       if (!data?.ok) throw new Error(data?.error ?? 'Falha ao buscar prospects')
-      return data
+      return data as { mode: 'sync' | 'job'; job_id?: string }
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['prospects', tenantId] }),
+    onSuccess: (data) => {
+      setJobId(data.mode === 'job' ? (data.job_id ?? null) : null)
+      queryClient.invalidateQueries({ queryKey: ['prospects', tenantId] })
+    },
   })
+
+  const jobQuery = useQuery({
+    queryKey: ['prospeccao-job', jobId],
+    queryFn: async () => {
+      const { data, error } = await supabase.from('prospeccao_jobs').select('*').eq('id', jobId).single()
+      if (error) throw error
+      return data as ProspeccaoJob
+    },
+    enabled: Boolean(jobId),
+    refetchInterval: (query) => {
+      const job = query.state.data as ProspeccaoJob | undefined
+      return job?.status === 'processing' ? 4000 : false
+    },
+  })
+
+  useEffect(() => {
+    if (jobQuery.data) {
+      queryClient.invalidateQueries({ queryKey: ['prospects', tenantId] })
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [jobQuery.data?.found_count, jobQuery.data?.status])
 
   function handleSearch(e: FormEvent) {
     e.preventDefault()
@@ -92,6 +120,23 @@ export function ProspeccaoPage() {
             className="w-56 rounded-lg border border-border bg-surface-2 px-3 py-2 text-text outline-none focus:border-violet"
           />
         </label>
+        <label className="flex flex-col gap-1.5 text-sm text-text-dim">
+          Quantidade a extrair: <span className="text-text">{targetCount}</span>
+          <input
+            type="range"
+            min={20}
+            max={1000}
+            step={10}
+            value={targetCount}
+            onChange={(e) => setTargetCount(Number(e.target.value))}
+            className="w-56 accent-violet"
+          />
+          {targetCount > SYNC_MAX_RESULTS && (
+            <span className="text-xs text-text-faint">
+              Acima de {SYNC_MAX_RESULTS}, vira uma extração em lote (pode levar alguns minutos).
+            </span>
+          )}
+        </label>
         <button
           type="submit"
           disabled={searchMutation.isPending}
@@ -103,6 +148,31 @@ export function ProspeccaoPage() {
           <p className="w-full text-sm text-magenta">{(searchMutation.error as Error).message}</p>
         )}
       </form>
+
+      {jobQuery.data && (
+        <div className="mb-6 rounded-xl border border-border bg-surface p-4">
+          <div className="mb-2 flex items-center justify-between text-sm">
+            <span className="text-text-dim">
+              {jobQuery.data.status === 'processing' && 'Extraindo em lote…'}
+              {jobQuery.data.status === 'done' && 'Extração concluída'}
+              {jobQuery.data.status === 'failed' && 'Extração falhou'}
+            </span>
+            <span className="text-text-faint">
+              {jobQuery.data.found_count} de até {jobQuery.data.target_count} — {jobQuery.data.next_cell_index}/
+              {jobQuery.data.grid_cells.length} áreas
+            </span>
+          </div>
+          <div className="h-2 w-full overflow-hidden rounded-full bg-surface-2">
+            <div
+              className="h-full rounded-full bg-gradient-to-r from-violet to-cyan transition-all"
+              style={{ width: `${Math.min(100, (jobQuery.data.found_count / jobQuery.data.target_count) * 100)}%` }}
+            />
+          </div>
+          {jobQuery.data.status === 'failed' && jobQuery.data.error && (
+            <p className="mt-2 text-xs text-magenta">{jobQuery.data.error}</p>
+          )}
+        </div>
+      )}
 
       <div className="mb-4 flex items-center gap-2">
         {(Object.keys(STATUS_FILTER_LABEL) as (keyof typeof STATUS_FILTER_LABEL)[]).map((status) => (
