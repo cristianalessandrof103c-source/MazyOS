@@ -1,3 +1,8 @@
+// DEPRECADO (Fase 2, 2026-07-14) — o dashboard não cria mais job carrossel com
+// params.pasta; o fluxo novo é 100% na nuvem (hub-generate-carrossel + hub-render-
+// carrossel + render-service/, ver sistema/README.md). Este arquivo fica só de
+// referência histórica, não roda mais nada de verdade (nenhum job novo tem esse shape).
+//
 // Worker local do hub de integrações (Fase 5). Processa os jobs "carrossel" pendentes
 // em integration_hub_jobs: roda o render.js da pasta (Playwright, sem alteração), sobe
 // os PNGs pro bucket hub-media do Supabase Storage e marca o job como concluído.

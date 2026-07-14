@@ -1,0 +1,14 @@
+{
+  "name": "bk-solutions-render-service",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Serviço HTTP (Cloud Run) que renderiza o carrossel HTML em PNG via Playwright — usado pelo hub-render-carrossel, já que Supabase Edge Functions não têm Chromium.",
+  "type": "module",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.19.2",
+    "playwright": "^1.48.0"
+  }
+}

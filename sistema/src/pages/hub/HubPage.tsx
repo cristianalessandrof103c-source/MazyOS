@@ -5,7 +5,13 @@ import { supabase } from '../../lib/supabase'
 import { TenantSidebarLayout } from '../../components/TenantSidebarLayout'
 import { NewCarrosselJobDialog } from './NewCarrosselJobDialog'
 import { extrairErroFuncao } from '../../lib/functions-error'
-import type { IntegrationHubJob, IntegrationHubStatus, IntegrationHubTool } from '../../lib/crm-types'
+import type {
+  CarrosselDraftResult,
+  CarrosselSlideDraft,
+  IntegrationHubJob,
+  IntegrationHubStatus,
+  IntegrationHubTool,
+} from '../../lib/crm-types'
 
 const TOOL_LABEL: Record<IntegrationHubTool, string> = {
   carrossel: 'Carrossel',
@@ -17,6 +23,7 @@ const TOOL_LABEL: Record<IntegrationHubTool, string> = {
 
 const STATUS_LABEL: Record<IntegrationHubStatus, string> = {
   pending: 'Pendente',
+  awaiting_approval: 'Aguardando revisão',
   processing: 'Processando',
   done: 'Concluído',
   failed: 'Falhou',
@@ -24,9 +31,81 @@ const STATUS_LABEL: Record<IntegrationHubStatus, string> = {
 
 const STATUS_STYLE: Record<IntegrationHubStatus, string> = {
   pending: 'bg-surface-2 text-text-dim',
+  awaiting_approval: 'bg-violet/15 text-violet',
   processing: 'bg-surface-2 text-text-dim',
   done: 'bg-cyan/15 text-cyan',
   failed: 'bg-magenta/15 text-magenta',
+}
+
+function CarrosselDraftReview({ tenantId, job }: { tenantId: string; job: IntegrationHubJob }) {
+  const queryClient = useQueryClient()
+  const draft = (job.result as CarrosselDraftResult | null)?.draft
+  const [slides, setSlides] = useState<CarrosselSlideDraft[]>(draft?.slides ?? [])
+  const [caption, setCaption] = useState(draft?.caption ?? '')
+  const [error, setError] = useState<string | null>(null)
+
+  const approveMutation = useMutation({
+    mutationFn: async () => {
+      const { data, error } = await supabase.functions.invoke('hub-render-carrossel', {
+        body: { job_id: job.id, slides, caption },
+      })
+      if (error) throw new Error(await extrairErroFuncao(error))
+      if (!data?.ok) throw new Error(data?.error ?? 'Falha ao renderizar')
+    },
+    onSuccess: () => {
+      setError(null)
+      queryClient.invalidateQueries({ queryKey: ['hub-jobs', tenantId] })
+    },
+    onError: (err: Error) => setError(err.message),
+  })
+
+  if (!draft) return null
+
+  function updateSlide(i: number, field: 'title' | 'body', value: string) {
+    setSlides((prev) => prev.map((s, idx) => (idx === i ? { ...s, [field]: value } : s)))
+  }
+
+  return (
+    <div className="mt-3 flex flex-col gap-3 rounded-lg border border-border bg-surface-2 p-3">
+      {slides.map((slide, i) => (
+        <div key={i} className="flex flex-col gap-1">
+          <span className="text-xs uppercase tracking-wide text-text-faint">
+            Slide {i + 1} · {slide.layout}
+          </span>
+          <input
+            value={slide.title}
+            onChange={(e) => updateSlide(i, 'title', e.target.value)}
+            className="rounded border border-border bg-surface px-2 py-1 text-sm text-text outline-none focus:border-violet"
+          />
+          {typeof slide.body === 'string' && (
+            <textarea
+              value={slide.body}
+              onChange={(e) => updateSlide(i, 'body', e.target.value)}
+              rows={2}
+              className="rounded border border-border bg-surface px-2 py-1 text-sm text-text outline-none focus:border-violet"
+            />
+          )}
+        </div>
+      ))}
+      <div className="flex flex-col gap-1">
+        <span className="text-xs uppercase tracking-wide text-text-faint">Legenda</span>
+        <textarea
+          value={caption}
+          onChange={(e) => setCaption(e.target.value)}
+          rows={4}
+          className="rounded border border-border bg-surface px-2 py-1 text-sm text-text outline-none focus:border-violet"
+        />
+      </div>
+      {error && <p className="text-xs text-magenta">{error}</p>}
+      <button
+        onClick={() => approveMutation.mutate()}
+        disabled={approveMutation.isPending}
+        className="self-start rounded-full bg-gradient-to-r from-violet to-cyan px-4 py-1.5 text-xs font-medium text-bg disabled:opacity-60"
+      >
+        {approveMutation.isPending ? 'Renderizando…' : 'Aprovar e renderizar'}
+      </button>
+    </div>
+  )
 }
 
 export function HubPage() {
@@ -85,7 +164,7 @@ export function HubPage() {
         <div>
           <h1 className="font-display text-xl font-semibold">Hub de integrações</h1>
           <p className="mt-1 text-sm text-text-dim">
-            Gera carrossel (via worker local) e publica no Instagram sem sair do dashboard.
+            Gera carrossel com IA e publica no Instagram sem sair do dashboard.
           </p>
         </div>
         <button
@@ -107,26 +186,20 @@ export function HubPage() {
             return (
               <li key={job.id} className="rounded-xl border border-border bg-surface p-4">
                 <div className="flex items-start justify-between gap-4">
-                  <div>
+                  <div className="min-w-0 flex-1">
                     <span className="rounded-full bg-violet/15 px-2 py-0.5 text-xs text-violet">
                       {TOOL_LABEL[job.tool]}
                     </span>
                     <span className={`ml-2 rounded-full px-2 py-0.5 text-xs ${STATUS_STYLE[job.status]}`}>
                       {STATUS_LABEL[job.status]}
                     </span>
-                    {typeof job.params.pasta === 'string' && (
-                      <p className="mt-2 text-sm text-text">{job.params.pasta}</p>
+                    {typeof job.params.tema === 'string' && (
+                      <p className="mt-2 text-sm text-text">{job.params.tema}</p>
                     )}
                     <p className="mt-1 text-xs text-text-faint">
                       {new Date(job.created_at).toLocaleString('pt-BR')}
                     </p>
 
-                    {job.tool === 'carrossel' && job.status === 'pending' && (
-                      <p className="mt-2 text-xs text-text-faint">
-                        Rode <code className="rounded bg-surface-2 px-1 py-0.5">node scripts/hub-worker.js</code> no
-                        terminal pra processar.
-                      </p>
-                    )}
                     {job.status === 'failed' && job.error && (
                       <p className="mt-2 text-xs text-magenta">{job.error}</p>
                     )}
@@ -142,6 +215,10 @@ export function HubPage() {
                     )}
                     {publishErrors[job.id] && (
                       <p className="mt-2 text-xs text-magenta">{publishErrors[job.id]}</p>
+                    )}
+
+                    {job.tool === 'carrossel' && job.status === 'awaiting_approval' && (
+                      <CarrosselDraftReview tenantId={tenantId} job={job} />
                     )}
                   </div>
 

@@ -388,6 +388,62 @@ falta habilitar a Geocoding API na chave, rodar a migration `0011`, atualizar
 verificação de JWT desligada, diferente das outras — quem chama é o `pg_cron`, não um
 usuário logado). Ainda não testado ponta a ponta.
 
+## Fase 2 — Hub/carrossel sai do worker local, vai pra nuvem (pronto, pendente de deploy)
+
+Antes: "Gerar carrossel" no Hub só criava um job apontando pra uma pasta que já
+precisava existir no disco (`marketing/conteudo/<pasta>/carrossel.html` + `render.js`),
+criada rodando a skill `/carrossel` **interativamente com o Claude Code** — não
+funcionava pra nenhum tenant real, só pro dono na própria máquina. Fluxo novo: o tenant
+digita um tema, a IA escreve o texto (sem interação), o tenant revisa/edita e aprova, e
+só então a imagem é renderizada — mantendo o mesmo checkpoint humano que a skill
+`/carrossel` já tinha, sem precisar do Claude Code aberto.
+
+- `supabase/migrations/0013_hub_carrossel_cloud.sql` — novo status
+  `awaiting_approval` em `integration_hub_jobs`, entre `pending` e `processing`.
+- `supabase/functions/hub-generate-carrossel/` — chamada pelo dashboard ao clicar
+  "Gerar carrossel": Claude (`claude-opus-4-8`, tool use forçado, mesmo padrão de
+  `extract-insights`) escreve 5-8 slides + legenda a partir do tema digitado, sem
+  interação humana nessa etapa. Rate limit de `HUB_CARROSSEL_DAILY_LIMIT` (padrão 5)
+  jobs por tenant a cada 24h. Salva como `status='awaiting_approval'`,
+  `result.draft = { slides, caption }` — nenhuma imagem ainda.
+- `supabase/functions/hub-render-carrossel/` — chamada quando o tenant aprova (com o
+  texto possivelmente editado na tela): monta o HTML dos slides usando
+  `companies.branding_json` (cor primária + logo, mesmo dado já usado no tema do
+  dashboard desde a Fase 7 — cada tenant gera com a própria cara, não a da BK), manda
+  pro `render-service` (abaixo) e sobe os PNGs pro bucket `hub-media` (mesmo de sempre).
+- `render-service/` — serviço novo, **fora** do Supabase: container Playwright
+  implantado no **Google Cloud Run** (escala a zero, só cobra quando renderiza). Existe
+  porque Edge Functions (Deno Deploy) não têm Chromium — reaproveita a mesma lógica de
+  screenshot que `marketing/conteudo/*/render.js` sempre usou (viewport 1080x1350,
+  screenshot de cada `.slide`), só que como HTTP em vez de script CLI. Deploy e
+  variáveis de ambiente documentados em `render-service/README.md`.
+- `scripts/hub-worker.js` — deprecado, deixado só de referência histórica (nenhum job
+  novo tem o shape `params.pasta` que ele espera).
+- Frontend: `NewCarrosselJobDialog.tsx` pede um tema em vez de um caminho de pasta;
+  `HubPage.tsx` mostra os slides gerados como texto editável (título/corpo/legenda) com
+  botão "Aprovar e renderizar" enquanto `status='awaiting_approval'`.
+
+### Escopo desta leva
+
+Só carrossel de **texto puro** (`tipo='texto'`). Carrossel com foto IA (geração via
+OpenAI, aprovação de foto — a skill `/carrossel` já suporta isso localmente) fica pra
+uma próxima leva, mesmo padrão de escopo reduzido das Fases 5 e 8.
+
+### Pendente (precisa de conta/infra — não dá pra automatizar daqui)
+
+1. **Implantar `render-service/`** no Cloud Run — passo a passo em
+   `render-service/README.md`. Gera a `RENDER_SERVICE_URL` e o segredo
+   `RENDER_SERVICE_SECRET`.
+2. Aplicar `0013_hub_carrossel_cloud.sql` no projeto hospedado (SQL Editor, sem CLI —
+   [[ambiente-sem-nodejs]]).
+3. Deploy de `hub-generate-carrossel` e `hub-render-carrossel` (painel do Supabase →
+   Edge Functions → Deploy a new function → Via Editor, mesmo processo manual da
+   Prospecção). Secrets de `hub-render-carrossel`: `RENDER_SERVICE_URL`,
+   `RENDER_SERVICE_SECRET` (mesmo valor do passo 1). `hub-generate-carrossel` reusa o
+   `ANTHROPIC_API_KEY` que já existe (Fase 2 do WhatsApp) — mesmo bloqueio de crédito já
+   registrado lá.
+4. Ainda não testado ponta a ponta (bloqueado nos passos 1-3 acima).
+
 ## Fase 1 (auditoria) — reforço de RLS por role (pendente de aplicar)
 
 Auditoria de RLS pedida pelo dono (2026-07-14) achou uma lacuna real: o schema define 4
