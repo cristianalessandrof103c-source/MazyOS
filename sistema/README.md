@@ -388,6 +388,41 @@ falta habilitar a Geocoding API na chave, rodar a migration `0011`, atualizar
 verificação de JWT desligada, diferente das outras — quem chama é o `pg_cron`, não um
 usuário logado). Ainda não testado ponta a ponta.
 
+## Fase 1 (auditoria) — reforço de RLS por role (pendente de aplicar)
+
+Auditoria de RLS pedida pelo dono (2026-07-14) achou uma lacuna real: o schema define 4
+papéis desde a Fase 0 (`tenant_admin`, `tenant_manager`, `tenant_agent`, `tenant_viewer`),
+mas as policies de escrita de `leads`/`deals`/`payments`/`acquisition_channels` (0003) e
+`agent_configs` (0004) liberavam qualquer membership `active`, sem olhar o role — o
+comentário original da 0003 já registrava isso como pendência ("fica pra quando existir
+mais de um usuário por tenant de verdade"), e isso passou a ser real desde o convite
+self-service da Fase 7. `tenant_viewer` hoje escreve igual `tenant_admin`.
+
+- `supabase/migrations/0012_role_write_restrictions.sql` — estende o Auth Hook com uma
+  claim nova `tenant_roles` (mapa `tenant_id -> role`, mesmo padrão de `tenant_ids`/
+  `is_platform_admin`), helper `jwt_tenant_role(tenant_id)`, e reaperta as policies de
+  escrita de `leads`/`deals`/`payments`/`acquisition_channels`/`agent_configs` (mais
+  `prospects_update_client` e `integration_hub_jobs_insert`, mesmo problema) pra excluir
+  `tenant_viewer`. Isolamento de tenant (o que já existia) não muda — só a granularidade
+  por role dentro do mesmo tenant.
+- `supabase/checks/0012_role_write_restrictions_check.sql` — verificação manual (cola no
+  SQL Editor do Supabase, roda numa transação com rollback, sem deixar dado de teste):
+  confirma que `tenant_viewer` é bloqueado ao inserir lead e que `tenant_manager` continua
+  funcionando.
+- **Efeito colateral esperado, não é bug**: sessões já abertas antes desta migration não
+  têm a claim `tenant_roles` ainda (só ganham num token reemitido — mesma ressalva já
+  documentada na Fase 7 pra `tenant_ids`). O helper trata claim ausente como "não é
+  viewer" de propósito, então ninguém perde acesso de escrita de repente; a restrição de
+  fato passa a valer sessão por sessão, conforme o token for renovado (refresh automático
+  em até 1h, ou no próximo login).
+
+### Pendente
+
+- Aplicar `0012_role_write_restrictions.sql` no projeto hospedado (SQL Editor do
+  Supabase — sem CLI, [[ambiente-sem-nodejs]]) e rodar o check logo em seguida.
+- Papéis ainda não têm UI pra trocar role de um membro ativo nem reenviar convite
+  (mesma pendência já registrada na Fase 7).
+
 ## Rodando localmente
 
 ```bash
