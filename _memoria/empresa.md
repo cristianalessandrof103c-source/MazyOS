@@ -9,7 +9,7 @@
 **Perfil:** 5 anos de mercado em marketing digital
 **Atende clientes:** A BK é B2B (vende para empresas), mas seu cliente-alvo é prestador de serviço — principalmente clínicas de estética. Não confundir com venda pra empresas B2B genéricas.
 **Equipe:**
-**Ferramentas:** Sistema próprio em construção (`sistema/`) — CRM + agente de IA no WhatsApp + dashboard financeiro + cérebro coletivo (RAG) + prospecção (busca de leads por nicho/região), sobre Supabase, Claude API, Meta WhatsApp Cloud API, Voyage AI e Google Places API. Meta Ads API (Marketing API + WhatsApp Cloud API) pra tráfego pago e automação de atendimento. Claude Code (MazyOS) pra automação de marketing e conteúdo.
+**Ferramentas:** Sistema próprio em construção (`sistema/`) — CRM + agente de IA no WhatsApp + dashboard financeiro + cérebro coletivo (RAG) + prospecção (busca de leads por nicho/região), sobre Supabase, Claude API, Meta WhatsApp Cloud API, Voyage AI e Google Places API. Meta Ads API (Marketing API + WhatsApp Cloud API) pra tráfego pago e automação de atendimento. Claude Code (MazyOS) pra automação de marketing e conteúdo. Google Cloud Run (`render-service`, região southamerica-east1) — renderiza o carrossel do Hub via Playwright, já que Supabase Edge Functions não têm Chromium.
 **Principais entregas:** Implementação de IA em processos B2B, criação de site/landing page, tráfego pago, automação de atendimento, dashboards de dados, sistemas especializados sob medida (incluindo controle de estoque) construídos de acordo com a necessidade do cliente, com foco em venda, otimização de negócio, redução de custo e aumento de lucro
 
 ## Contexto adicional
