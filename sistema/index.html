@@ -11,6 +11,18 @@
       rel="stylesheet"
     />
     <title>BK Solutions — Sistema</title>
+    <script>
+      (function () {
+        var stored = localStorage.getItem('bk-theme')
+        var theme =
+          stored === 'light' || stored === 'dark'
+            ? stored
+            : window.matchMedia('(prefers-color-scheme: light)').matches
+              ? 'light'
+              : 'dark'
+        document.documentElement.dataset.theme = theme
+      })()
+    </script>
   </head>
   <body>
     <div id="root"></div>

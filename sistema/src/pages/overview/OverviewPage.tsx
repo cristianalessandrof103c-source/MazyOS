@@ -1,4 +1,5 @@
 import { useMemo } from 'react'
+import type { ReactElement, SVGProps } from 'react'
 import { useParams } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { supabase } from '../../lib/supabase'
@@ -7,8 +8,67 @@ import { formatarReais } from '../../lib/money'
 import { lastNDays, bucketByDay } from '../../lib/timeseries'
 import { TimeSeriesChart } from '../../components/charts/TimeSeriesChart'
 import { HorizontalBarChart } from '../../components/charts/HorizontalBarChart'
-import { StatTile } from '../financeiro/StatTile'
 import type { AcquisitionChannel, Deal, Lead } from '../../lib/crm-types'
+
+function StatIcon(props: SVGProps<SVGSVGElement>) {
+  return <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" {...props} />
+}
+
+const STAT_ICONS = {
+  spend: (p: SVGProps<SVGSVGElement>) => <StatIcon {...p}><path d="M3 17 9 11 13 15 21 6" /><path d="M15 6h6v6" /></StatIcon>,
+  leads: (p: SVGProps<SVGSVGElement>) => <StatIcon {...p}><circle cx="9" cy="8" r="3.2" /><path d="M3 20v-.6a6 6 0 0 1 6-6h0a6 6 0 0 1 6 6v.6" /><circle cx="18" cy="9" r="2.4" /></StatIcon>,
+  revenue: (p: SVGProps<SVGSVGElement>) => <StatIcon {...p}><rect x="2.5" y="6" width="19" height="12" rx="2.5" /><circle cx="12" cy="12" r="2.5" /></StatIcon>,
+  pending: (p: SVGProps<SVGSVGElement>) => <StatIcon {...p}><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3.5 2" /></StatIcon>,
+  target: (p: SVGProps<SVGSVGElement>) => <StatIcon {...p}><circle cx="12" cy="12" r="8.5" /><circle cx="12" cy="12" r="4.5" /><circle cx="12" cy="12" r="0.8" fill="currentColor" /></StatIcon>,
+}
+
+function Sparkline({ values, color }: { values: number[]; color: string }) {
+  const max = Math.max(...values, 1)
+  const min = Math.min(...values, 0)
+  const range = max - min || 1
+  const w = 72
+  const h = 28
+  const points = values
+    .map((v, i) => `${(i / (values.length - 1 || 1)) * w},${h - ((v - min) / range) * h}`)
+    .join(' ')
+  return (
+    <svg width={w} height={h} viewBox={`0 0 ${w} ${h}`} className="flex-shrink-0">
+      <polyline points={points} fill="none" stroke={color} strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  )
+}
+
+function StatCard({
+  label,
+  value,
+  hint,
+  icon: IconComp,
+  badgeColor,
+  sparkline,
+}: {
+  label: string
+  value: string
+  hint?: string
+  icon: (p: SVGProps<SVGSVGElement>) => ReactElement
+  badgeColor: string
+  sparkline?: number[]
+}) {
+  return (
+    <div className="card flex flex-col p-5">
+      <div className="flex items-start justify-between">
+        <p className="text-xs text-text-dim">{label}</p>
+        <span className="icon-badge" style={{ backgroundColor: `color-mix(in srgb, ${badgeColor} 16%, transparent)`, color: badgeColor }}>
+          <IconComp />
+        </span>
+      </div>
+      <p className="metric-number mt-4 text-2xl font-semibold text-text md:text-[1.7rem]">{value}</p>
+      <div className="mt-3 flex items-end justify-between gap-2">
+        <p className="text-xs text-text-faint">{hint ?? 'dado real'}</p>
+        {sparkline && sparkline.some((v) => v > 0) && <Sparkline values={sparkline} color={badgeColor} />}
+      </div>
+    </div>
+  )
+}
 
 type Payment = { amount_cents: number; status: 'pending' | 'paid' | 'overdue' }
 type AdSpendSnapshot = { date: string; spend_cents: number }
@@ -117,36 +177,57 @@ export function OverviewPage() {
 
   return (
     <TenantSidebarLayout tenantId={tenantId}>
-      <header className="flex items-end justify-between border-b border-border pb-6">
+      <header className="flex items-end justify-between">
         <div>
-          <p className="eyebrow">Painel de operação / {PERIODO_DIAS} dias</p>
-          <h1 className="mt-3 max-w-2xl font-display text-4xl font-semibold leading-none tracking-[-0.04em] md:text-5xl">Do investimento à receita, sem pontos cegos.</h1>
+          <p className="eyebrow">Painel de operação · {PERIODO_DIAS} dias</p>
+          <h1 className="mt-2 font-display text-2xl font-semibold text-text">Visão geral</h1>
         </div>
-        <span className="hidden font-mono text-[10px] uppercase tracking-widest text-text-faint md:block">Dados em tempo real</span>
+        <span className="hidden text-xs text-text-faint md:block">Dados em tempo real</span>
       </header>
 
       {loading && <p className="mt-6 text-text-dim">Carregando…</p>}
 
       {!loading && (
         <>
-          <p className="eyebrow mt-8">Fluxo comercial</p>
-          <div className="mt-3 grid overflow-hidden border border-border bg-border gap-px md:grid-cols-3">
-            <div className="bg-surface p-5"><span className="font-mono text-[10px] text-magenta">01 / INVESTIR</span><p className="metric-number mt-5 text-3xl">{formatarReais(gastoTotal)}</p><p className="mt-1 text-xs text-text-dim">Gasto de tráfego</p></div>
-            <div className="bg-surface p-5"><span className="font-mono text-[10px] text-violet">02 / CONVERTER</span><p className="metric-number mt-5 text-3xl">{leads.length.toLocaleString('pt-BR')}</p><p className="mt-1 text-xs text-text-dim">Leads captados</p></div>
-            <div className="bg-surface p-5"><span className="font-mono text-[10px] text-cyan">03 / FATURAR</span><p className="metric-number mt-5 text-3xl">{formatarReais(receitaFechada)}</p><p className="mt-1 text-xs text-text-dim">Receita fechada</p></div>
-          </div>
-
-          <div className="mt-3 grid grid-cols-2 gap-3 md:grid-cols-3">
-            <StatTile label="Receita a receber" value={formatarReais(receitaAReceber)} />
-            <StatTile
+          <div className="mt-6 grid grid-cols-2 gap-4 lg:grid-cols-5">
+            <StatCard
+              label="Gasto de tráfego"
+              value={formatarReais(gastoTotal)}
+              icon={STAT_ICONS.spend}
+              badgeColor="var(--color-magenta)"
+              sparkline={gastoPorDia}
+            />
+            <StatCard
+              label="Leads captados"
+              value={leads.length.toLocaleString('pt-BR')}
+              icon={STAT_ICONS.leads}
+              badgeColor="var(--color-violet)"
+              sparkline={leadsPorDia}
+            />
+            <StatCard
+              label="Receita fechada"
+              value={formatarReais(receitaFechada)}
+              icon={STAT_ICONS.revenue}
+              badgeColor="var(--color-cyan)"
+              sparkline={receitaPorDia}
+            />
+            <StatCard
+              label="Receita a receber"
+              value={formatarReais(receitaAReceber)}
+              icon={STAT_ICONS.pending}
+              badgeColor="var(--color-cyan)"
+            />
+            <StatCard
               label="CAC (canais pagos)"
               value={cac === null ? '—' : formatarReais(cac)}
-              hint={vendasPorCanalPago === 0 ? 'nenhuma venda por canal pago ainda' : undefined}
+              hint={vendasPorCanalPago === 0 ? 'sem venda por canal pago ainda' : 'dado real'}
+              icon={STAT_ICONS.target}
+              badgeColor="var(--color-violet)"
             />
           </div>
 
-          <div className="mt-8 grid gap-6 lg:grid-cols-2">
-            <section className="panel-cut p-5">
+          <div className="mt-6 grid gap-4 lg:grid-cols-2">
+            <section className="card p-5">
               <h2 className="text-sm font-medium text-text-dim">Leads por dia</h2>
               <div className="mt-4">
                 <TimeSeriesChart
@@ -156,7 +237,7 @@ export function OverviewPage() {
               </div>
             </section>
 
-            <section className="panel-cut p-5">
+            <section className="card p-5">
               <h2 className="text-sm font-medium text-text-dim">Receita × gasto de tráfego</h2>
               <div className="mt-4">
                 <TimeSeriesChart
@@ -170,7 +251,7 @@ export function OverviewPage() {
             </section>
           </div>
 
-          <section className="panel-cut mt-6 p-5">
+          <section className="card mt-4 p-5">
             <h2 className="text-sm font-medium text-text-dim">Leads por canal ({PERIODO_DIAS} dias)</h2>
             <div className="mt-4">
               <HorizontalBarChart data={leadsPorCanal} color={CHART_VIOLET} />
