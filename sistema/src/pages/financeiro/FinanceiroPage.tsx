@@ -1,9 +1,10 @@
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import { useParams } from 'react-router-dom'
-import { useQuery } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '../../lib/supabase'
 import { TenantSidebarLayout } from '../../components/TenantSidebarLayout'
 import { formatarReais } from '../../lib/money'
+import { extrairErroFuncao } from '../../lib/functions-error'
 import { StatTile } from './StatTile'
 import type { AcquisitionChannel, Deal, Lead } from '../../lib/crm-types'
 
@@ -19,6 +20,9 @@ const PERIODO_DIAS = 30
 
 export function FinanceiroPage() {
   const { tenantId } = useParams<{ tenantId: string }>()
+  const queryClient = useQueryClient()
+  const [syncError, setSyncError] = useState<string | null>(null)
+  const [syncOk, setSyncOk] = useState(false)
 
   // Truncado pro dia (sem hora) — mesma queryKey que a Visão Geral usa, então navegar entre as
   // duas páginas reaproveita o cache do TanStack Query em vez de refazer o fetch.
@@ -87,6 +91,25 @@ export function FinanceiroPage() {
       return data as AdSpendSnapshot[]
     },
     enabled: Boolean(tenantId),
+  })
+
+  const syncMutation = useMutation({
+    mutationFn: async () => {
+      const { data, error } = await supabase.functions.invoke('sync-ad-spend-now', {
+        body: { tenant_id: tenantId },
+      })
+      if (error) throw new Error(await extrairErroFuncao(error))
+      if (!data?.ok) throw new Error(data?.error ?? 'Falha ao sincronizar')
+    },
+    onSuccess: () => {
+      setSyncError(null)
+      setSyncOk(true)
+      queryClient.invalidateQueries({ queryKey: ['financeiro-ad-spend', tenantId] })
+    },
+    onError: (err: Error) => {
+      setSyncOk(false)
+      setSyncError(err.message)
+    },
   })
 
   if (!tenantId) return null
@@ -180,7 +203,23 @@ export function FinanceiroPage() {
               </section>
 
               <section>
-                <h2 className="text-sm font-medium text-text-dim">Gasto de tráfego por dia</h2>
+                <div className="flex items-center justify-between gap-3">
+                  <h2 className="text-sm font-medium text-text-dim">Gasto de tráfego por dia</h2>
+                  <button
+                    onClick={() => {
+                      setSyncOk(false)
+                      syncMutation.mutate()
+                    }}
+                    disabled={syncMutation.isPending}
+                    className="rounded-full border border-border px-3 py-1 text-xs font-medium text-text-dim hover:border-violet hover:text-text disabled:opacity-60"
+                  >
+                    {syncMutation.isPending ? 'Sincronizando…' : 'Sincronizar agora'}
+                  </button>
+                </div>
+                {syncError && <p className="mt-2 text-xs text-magenta">{syncError}</p>}
+                {syncOk && !syncMutation.isPending && (
+                  <p className="mt-2 text-xs text-cyan">Sincronizado.</p>
+                )}
                 <div className="mt-3 overflow-hidden rounded-xl border border-border">
                   <table className="w-full text-sm">
                     <thead>

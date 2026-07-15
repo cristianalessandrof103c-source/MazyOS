@@ -388,7 +388,7 @@ falta habilitar a Geocoding API na chave, rodar a migration `0011`, atualizar
 verificação de JWT desligada, diferente das outras — quem chama é o `pg_cron`, não um
 usuário logado). Ainda não testado ponta a ponta.
 
-## Fase 2 — Hub/carrossel sai do worker local, vai pra nuvem (pronto, pendente de deploy)
+## Fase 2 — Hub/carrossel sai do worker local, vai pra nuvem (pronto e deployado, 2026-07-14)
 
 Antes: "Gerar carrossel" no Hub só criava um job apontando pra uma pasta que já
 precisava existir no disco (`marketing/conteudo/<pasta>/carrossel.html` + `render.js`),
@@ -429,22 +429,27 @@ Só carrossel de **texto puro** (`tipo='texto'`). Carrossel com foto IA (geraç�
 OpenAI, aprovação de foto — a skill `/carrossel` já suporta isso localmente) fica pra
 uma próxima leva, mesmo padrão de escopo reduzido das Fases 5 e 8.
 
-### Pendente (precisa de conta/infra — não dá pra automatizar daqui)
+### Deploy (concluído 2026-07-14)
 
-1. **Implantar `render-service/`** no Cloud Run — passo a passo em
-   `render-service/README.md`. Gera a `RENDER_SERVICE_URL` e o segredo
-   `RENDER_SERVICE_SECRET`.
-2. Aplicar `0013_hub_carrossel_cloud.sql` no projeto hospedado (SQL Editor, sem CLI —
-   [[ambiente-sem-nodejs]]).
-3. Deploy de `hub-generate-carrossel` e `hub-render-carrossel` (painel do Supabase →
-   Edge Functions → Deploy a new function → Via Editor, mesmo processo manual da
-   Prospecção). Secrets de `hub-render-carrossel`: `RENDER_SERVICE_URL`,
-   `RENDER_SERVICE_SECRET` (mesmo valor do passo 1). `hub-generate-carrossel` reusa o
-   `ANTHROPIC_API_KEY` que já existe (Fase 2 do WhatsApp) — mesmo bloqueio de crédito já
-   registrado lá.
-4. Ainda não testado ponta a ponta (bloqueado nos passos 1-3 acima).
+`render-service/` implantado no Cloud Run (região southamerica-east1, escala a zero) via
+Developer Connect + GitHub — achado no processo: a versão do pacote `playwright` no
+`package.json` precisa bater EXATAMENTE com a tag da imagem Docker
+(`mcr.microsoft.com/playwright:v1.48.0-jammy`), senão o Chromium instalado não bate e o
+`launch` falha ("Executable doesn't exist"); corrigido travando a versão em `1.48.0`
+(sem `^`). Migrations `0008` (nunca tinha sido aplicada — pendência esquecida desde a
+Fase 5), `0012` e `0013` aplicadas via SQL Editor. As duas functions deployadas via
+"Via Editor". Secrets `RENDER_SERVICE_URL`/`RENDER_SERVICE_SECRET` configurados.
 
-## Fase 1 (auditoria) — reforço de RLS por role (pendente de aplicar)
+### Testado
+
+`render-service` testado direto por curl (gera PNG de verdade). `hub-generate-carrossel`
+testado pela tela: autenticação, permissão por role e rate limit funcionando — parou em
+"Your credit balance is too low to access the Anthropic API" (mesmo bloqueio de crédito
+já registrado na Fase 2 do WhatsApp, decisão do dono de deixar pro final). Fluxo completo
+(aprovar draft → `hub-render-carrossel` → `render-service` → Storage) **ainda não
+testado ponta a ponta** — depende de crédito na Anthropic pra gerar um draft primeiro.
+
+## Fase 1 (auditoria) — reforço de RLS por role (pronto e aplicado, 2026-07-14)
 
 Auditoria de RLS pedida pelo dono (2026-07-14) achou uma lacuna real: o schema define 4
 papéis desde a Fase 0 (`tenant_admin`, `tenant_manager`, `tenant_agent`, `tenant_viewer`),
@@ -474,10 +479,45 @@ self-service da Fase 7. `tenant_viewer` hoje escreve igual `tenant_admin`.
 
 ### Pendente
 
-- Aplicar `0012_role_write_restrictions.sql` no projeto hospedado (SQL Editor do
-  Supabase — sem CLI, [[ambiente-sem-nodejs]]) e rodar o check logo em seguida.
 - Papéis ainda não têm UI pra trocar role de um membro ativo nem reenviar convite
   (mesma pendência já registrada na Fase 7).
+
+## Fase 3 (parte 2) — botão "sincronizar agora" + mensagens de erro claras (pronto, pendente de deploy)
+
+O motor de sincronização em si (`sync-ad-spend`, cron diário às 6h) já existia desde a
+Fase 3 original. Faltava exatamente o que o dono pediu: um jeito de forçar a
+sincronização na hora, e mensagens de erro que dissessem *por que* o gasto está zerado
+(token expirado vs conta sem campanha conectada vs campanha pausada) em vez do genérico
+"sem sincronização ainda".
+
+- `supabase/functions/sync-ad-spend-now/` — mesma lógica de `sync-ad-spend` (porte de
+  `scripts/lib/meta-ads-api.js`), mas autenticada por usuário (JWT normal do dashboard,
+  checa role != tenant_viewer) e escopada a um tenant só — `sync-ad-spend` continua
+  existindo pro cron, que sincroniza todos os tenants de uma vez e não pode expor o
+  `DISPATCHER_SECRET` pro navegador. Detecta erro de token (Graph API `OAuthException`/
+  code 190) e devolve mensagem específica; detecta tenant sem `ad_account_connections` e
+  avisa em vez de só devolver zero.
+- `src/pages/financeiro/FinanceiroPage.tsx` — botão "Sincronizar agora" ao lado de
+  "Gasto de tráfego por dia", mostra sucesso/erro inline e invalida a query
+  (`financeiro-ad-spend`) — a Visão Geral usa a mesma query key, então também atualiza.
+- Autocontida (sem `_shared/`), mesmo padrão de `prospeccao-buscar`/`hub-render-carrossel`.
+
+### Contexto (2026-07-14)
+
+A verificação de empresa da Meta (iniciada 2026-07-07, estimativa até 2026-07-21) ainda
+**não foi aprovada** — a campanha real (`120246235146860014`) continua `PAUSED`, sem
+gasto de verdade pra sincronizar. O botão funciona, mas continua mostrando zero até a
+campanha rodar de verdade. O token do WhatsApp (diferente do `META_ADS_ACCESS_TOKEN`,
+que é de System User e não expira em 24h) segue expirado — gerar um permanente via
+System User `bkads` continua pendente, bloqueando o agente/follow-up real (mesma
+pendência das Fases 2/3 originais).
+
+### Pendente
+
+1. Deploy de `sync-ad-spend-now` (painel do Supabase → Edge Functions → Via Editor).
+2. Ainda não testado ponta a ponta (sem campanha ativa pra gerar gasto real — só dá pra
+   confirmar que o botão chama a function e trata os dois erros esperados).
+3. Token permanente do WhatsApp (bloqueio separado, ver acima).
 
 ## Rodando localmente
 
