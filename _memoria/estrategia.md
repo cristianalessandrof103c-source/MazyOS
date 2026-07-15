@@ -39,6 +39,22 @@ function `prospeccao-buscar`, criar a function nova `prospeccao-worker`, e habil
 Geocoding API na chave do Google) — ainda não testado ponta a ponta. Detalhes de cada
 fase em `sistema/README.md`.
 
+Auditoria de RLS pedida pelo dono (2026-07-14) achou que `tenant_viewer` conseguia
+escrever igual `tenant_admin` em leads/deals/payments/acquisition_channels/agent_configs
+— migration `0012_role_write_restrictions.sql` fecha essa lacuna (claim `tenant_roles`
+no Auth Hook + policies restritas). Também 2026-07-14: Fase 2 do Hub (carrossel saiu do
+worker local, que só funcionava rodando a skill `/carrossel` com Claude Code na máquina
+do dono) foi pra nuvem — `hub-generate-carrossel` (Claude gera o texto do tema digitado,
+sem interação) e `hub-render-carrossel` (monta o HTML com a marca do tenant e manda
+renderizar), com um serviço novo, `render-service`, rodando Playwright num container no
+**Google Cloud Run** (região southamerica-east1, escala a zero). `render-service` já
+implantado e testado com sucesso via curl (achado e corrigido nesse processo: a imagem
+Docker precisa ter a mesma versão exata do pacote `playwright` do `package.json`, senão
+o Chromium instalado não bate e o launch falha). Pendente: aplicar as migrations
+`0012`/`0013` e fazer deploy das 2 Edge Functions no Supabase, configurar os secrets,
+testar ponta a ponta, e só então mesclar pra `main` (o frontend novo do Hub só vai ao ar
+depois desse merge).
+
 ## O que pode esperar
 
 - **Crédito na conta da Anthropic** (console.anthropic.com → Plans & Billing) — necessário pra o agente de WhatsApp (Fase 2) e a extração de insights (Fase 4) funcionarem de verdade. Decisão do dono (2026-07-07): deixar pra fazer só no final, quando o resto do sistema estiver pronto, junto com a configuração de pagamento.

@@ -61,8 +61,12 @@ export type Message = {
 }
 
 export type IntegrationHubTool = 'carrossel' | 'seo' | 'site' | 'instagram_post' | 'ads_campaign'
-export type IntegrationHubStatus = 'pending' | 'processing' | 'done' | 'failed'
+export type IntegrationHubStatus = 'pending' | 'awaiting_approval' | 'processing' | 'done' | 'failed'
 
+export type CarrosselSlideLayout = 'capa' | 'solo' | 'numero' | 'citacao' | 'cta'
+export type CarrosselSlideDraft = { layout: CarrosselSlideLayout; kicker?: string; title: string; body?: string }
+
+export type CarrosselDraftResult = { draft: { slides: CarrosselSlideDraft[]; caption: string } }
 export type CarrosselJobResult = { images: string[]; caption: string }
 export type InstagramPostJobResult = { post_id: string; permalink: string | null }
 
@@ -72,7 +76,7 @@ export type IntegrationHubJob = {
   tool: IntegrationHubTool
   status: IntegrationHubStatus
   params: Record<string, unknown>
-  result: CarrosselJobResult | InstagramPostJobResult | null
+  result: CarrosselDraftResult | CarrosselJobResult | InstagramPostJobResult | null
   error: string | null
   created_at: string
 }
