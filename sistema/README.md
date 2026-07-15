@@ -494,30 +494,34 @@ sincronização na hora, e mensagens de erro que dissessem *por que* o gasto est
   `scripts/lib/meta-ads-api.js`), mas autenticada por usuário (JWT normal do dashboard,
   checa role != tenant_viewer) e escopada a um tenant só — `sync-ad-spend` continua
   existindo pro cron, que sincroniza todos os tenants de uma vez e não pode expor o
-  `DISPATCHER_SECRET` pro navegador. Detecta erro de token (Graph API `OAuthException`/
-  code 190) e devolve mensagem específica; detecta tenant sem `ad_account_connections` e
-  avisa em vez de só devolver zero.
+  `DISPATCHER_SECRET` pro navegador. Distingue dois erros da Graph API que pareciam a
+  mesma coisa mas não são: `code 190` (token de fato inválido/expirado — gerar um novo
+  resolve) vs `type: OAuthException, code 200` ("API access blocked" — o token está
+  certo, quem está sem acesso aprovado à Marketing API é o **App**; gerar token novo não
+  resolve, só a verificação de empresa da Meta libera). Detecta tenant sem
+  `ad_account_connections` e avisa em vez de só devolver zero.
 - `src/pages/financeiro/FinanceiroPage.tsx` — botão "Sincronizar agora" ao lado de
   "Gasto de tráfego por dia", mostra sucesso/erro inline e invalida a query
   (`financeiro-ad-spend`) — a Visão Geral usa a mesma query key, então também atualiza.
 - Autocontida (sem `_shared/`), mesmo padrão de `prospeccao-buscar`/`hub-render-carrossel`.
 
-### Contexto (2026-07-14)
+### Testado ponta a ponta (2026-07-14) — achado real
 
-A verificação de empresa da Meta (iniciada 2026-07-07, estimativa até 2026-07-21) ainda
-**não foi aprovada** — a campanha real (`120246235146860014`) continua `PAUSED`, sem
-gasto de verdade pra sincronizar. O botão funciona, mas continua mostrando zero até a
-campanha rodar de verdade. O token do WhatsApp (diferente do `META_ADS_ACCESS_TOKEN`,
-que é de System User e não expira em 24h) segue expirado — gerar um permanente via
-System User `bkads` continua pendente, bloqueando o agente/follow-up real (mesma
-pendência das Fases 2/3 originais).
+Token do WhatsApp renovado (permanente, via System User `bkads`). Ao testar
+"Sincronizar agora" pela primeira vez, apareceu "token expirado" — só que testando o
+mesmo token direto por curl contra a Graph API, o erro real era `{"type":
+"OAuthException","code":200,"message":"API access blocked."}`, não `code 190`. Ou seja:
+o token estava certo, o bloqueio é o **App** não ter acesso aprovado à Marketing API —
+mesmo bloqueio de fundo que já impedia criar o objeto do anúncio, ligado à verificação
+de empresa da Meta (iniciada 2026-07-07, estimativa até 2026-07-21, **ainda não
+aprovada**). A function classificava qualquer `OAuthException` como token expirado;
+corrigido pra diferenciar os dois casos e apontar a causa certa.
 
 ### Pendente
 
-1. Deploy de `sync-ad-spend-now` (painel do Supabase → Edge Functions → Via Editor).
-2. Ainda não testado ponta a ponta (sem campanha ativa pra gerar gasto real — só dá pra
-   confirmar que o botão chama a function e trata os dois erros esperados).
-3. Token permanente do WhatsApp (bloqueio separado, ver acima).
+1. Verificação de empresa da Meta aprovar — sem isso a Marketing API continua
+   bloqueada pro App e a campanha real (`120246235146860014`) continua `PAUSED`, sem
+   gasto de verdade pra sincronizar (o botão funciona, mas mostra zero até lá).
 
 ## Rodando localmente
 
