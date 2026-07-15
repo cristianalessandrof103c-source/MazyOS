@@ -1,47 +1,50 @@
+@import url('https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,600;12..96,700&family=IBM+Plex+Mono:wght@400;500&family=Inter:wght@300;400;500;600&display=swap');
 @import "tailwindcss";
 
-/*
-  Design tokens portados de saidas/site/styles.css (identidade "dark tech" da BK Solutions).
-  Servem como default de branding — cada tenant pode sobrescrever via companies.branding_json.
-*/
 @theme {
-  --color-bg: #06070c;
-  --color-bg-alt: #0a0c16;
-  --color-surface: #10121e;
-  --color-surface-2: #161927;
-  --color-border: rgba(255, 255, 255, 0.08);
-  --color-text: #eef0f6;
-  --color-text-dim: #9a9db3;
-  --color-text-faint: #656984;
-  --color-violet: #8b5cf6;
-  --color-cyan: #22d3ee;
-  --color-magenta: #ec4899;
-
-  --font-display: "Space Grotesk", sans-serif;
+  --color-bg: #090a0d;
+  --color-bg-alt: #0d0f13;
+  --color-surface: #121419;
+  --color-surface-2: #1a1d23;
+  --color-border: rgba(255,255,255,.1);
+  --color-text: #f2f0e9;
+  --color-text-dim: #aaa9a2;
+  --color-text-faint: #73736f;
+  --color-violet: #c8ff32;
+  --color-cyan: #41c7f5;
+  --color-magenta: #ff6b56;
+  --font-display: "Bricolage Grotesque", sans-serif;
   --font-body: "Inter", sans-serif;
+  --font-mono: "IBM Plex Mono", monospace;
 }
 
 @layer base {
-  * {
-    margin: 0;
-    padding: 0;
-    box-sizing: border-box;
-  }
-
-  html {
-    scroll-behavior: smooth;
-  }
-
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
   body {
-    background: var(--color-bg);
+    margin: 0;
+    background: linear-gradient(rgba(255,255,255,.018) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.018) 1px,transparent 1px),var(--color-bg);
+    background-size: 40px 40px;
     color: var(--color-text);
     font-family: var(--font-body);
-    font-weight: 300;
+    font-weight: 400;
     line-height: 1.5;
   }
+  button, a { -webkit-tap-highlight-color: transparent; }
+  button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible { outline: 2px solid var(--color-violet); outline-offset: 3px; }
+  ::selection { background: var(--color-violet); color: #090a0d; }
+}
 
-  ::selection {
-    background: var(--color-violet);
-    color: #fff;
-  }
+@layer components {
+  .app-shell { min-height: 100vh; }
+  .app-main { width: 100%; max-width: 1680px; margin-inline: auto; }
+  .eyebrow { font: 500 .68rem/1 var(--font-mono); letter-spacing: .16em; text-transform: uppercase; color: var(--color-violet); }
+  .metric-number { font-family: var(--font-mono); letter-spacing: -.055em; }
+  .panel-cut { position: relative; border: 1px solid var(--color-border); background: rgba(18,20,25,.9); }
+  .panel-cut::after { content: ''; position: absolute; right: -1px; top: -1px; width: 18px; height: 18px; background: var(--color-bg); clip-path: polygon(100% 0,100% 100%,0 0); }
+  .brand-glow { box-shadow: 0 0 32px color-mix(in srgb,var(--color-violet) 17%,transparent); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { scroll-behavior: auto !important; transition-duration: .01ms !important; animation-duration: .01ms !important; }
 }

@@ -117,22 +117,27 @@ export function OverviewPage() {
 
   return (
     <TenantSidebarLayout tenantId={tenantId}>
-      <h1 className="font-display text-xl font-semibold">Visão geral</h1>
-      <p className="mt-1 text-sm text-text-dim">Últimos {PERIODO_DIAS} dias.</p>
+      <header className="flex items-end justify-between border-b border-border pb-6">
+        <div>
+          <p className="eyebrow">Painel de operação / {PERIODO_DIAS} dias</p>
+          <h1 className="mt-3 max-w-2xl font-display text-4xl font-semibold leading-none tracking-[-0.04em] md:text-5xl">Do investimento à receita, sem pontos cegos.</h1>
+        </div>
+        <span className="hidden font-mono text-[10px] uppercase tracking-widest text-text-faint md:block">Dados em tempo real</span>
+      </header>
 
       {loading && <p className="mt-6 text-text-dim">Carregando…</p>}
 
       {!loading && (
         <>
-          <div className="mt-6 grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-5">
-            <StatTile label={`Leads (${PERIODO_DIAS} dias)`} value={leads.length.toLocaleString('pt-BR')} />
-            <StatTile label="Receita fechada" value={formatarReais(receitaFechada)} />
+          <p className="eyebrow mt-8">Fluxo comercial</p>
+          <div className="mt-3 grid overflow-hidden border border-border bg-border gap-px md:grid-cols-3">
+            <div className="bg-surface p-5"><span className="font-mono text-[10px] text-magenta">01 / INVESTIR</span><p className="metric-number mt-5 text-3xl">{formatarReais(gastoTotal)}</p><p className="mt-1 text-xs text-text-dim">Gasto de tráfego</p></div>
+            <div className="bg-surface p-5"><span className="font-mono text-[10px] text-violet">02 / CONVERTER</span><p className="metric-number mt-5 text-3xl">{leads.length.toLocaleString('pt-BR')}</p><p className="mt-1 text-xs text-text-dim">Leads captados</p></div>
+            <div className="bg-surface p-5"><span className="font-mono text-[10px] text-cyan">03 / FATURAR</span><p className="metric-number mt-5 text-3xl">{formatarReais(receitaFechada)}</p><p className="mt-1 text-xs text-text-dim">Receita fechada</p></div>
+          </div>
+
+          <div className="mt-3 grid grid-cols-2 gap-3 md:grid-cols-3">
             <StatTile label="Receita a receber" value={formatarReais(receitaAReceber)} />
-            <StatTile
-              label={`Gasto de tráfego (${PERIODO_DIAS} dias)`}
-              value={formatarReais(gastoTotal)}
-              hint={adSpend.length === 0 ? 'sem sincronização ainda' : undefined}
-            />
             <StatTile
               label="CAC (canais pagos)"
               value={cac === null ? '—' : formatarReais(cac)}
@@ -141,7 +146,7 @@ export function OverviewPage() {
           </div>
 
           <div className="mt-8 grid gap-6 lg:grid-cols-2">
-            <section className="rounded-xl border border-border bg-surface p-5">
+            <section className="panel-cut p-5">
               <h2 className="text-sm font-medium text-text-dim">Leads por dia</h2>
               <div className="mt-4">
                 <TimeSeriesChart
@@ -151,7 +156,7 @@ export function OverviewPage() {
               </div>
             </section>
 
-            <section className="rounded-xl border border-border bg-surface p-5">
+            <section className="panel-cut p-5">
               <h2 className="text-sm font-medium text-text-dim">Receita × gasto de tráfego</h2>
               <div className="mt-4">
                 <TimeSeriesChart
@@ -165,7 +170,7 @@ export function OverviewPage() {
             </section>
           </div>
 
-          <section className="mt-6 rounded-xl border border-border bg-surface p-5">
+          <section className="panel-cut mt-6 p-5">
             <h2 className="text-sm font-medium text-text-dim">Leads por canal ({PERIODO_DIAS} dias)</h2>
             <div className="mt-4">
               <HorizontalBarChart data={leadsPorCanal} color={CHART_VIOLET} />
