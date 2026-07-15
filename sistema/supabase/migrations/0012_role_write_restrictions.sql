@@ -56,7 +56,7 @@ $$;
 --    evita bloquear quem já está logado até o refresh automático (até 1h) ou próximo login;
 --    a restrição de fato passa a valer pra cada sessão assim que o token for reemitido.
 -- ============================================================
-create function public.jwt_tenant_role(p_tenant_id uuid)
+create or replace function public.jwt_tenant_role(p_tenant_id uuid)
 returns text
 language sql
 stable
