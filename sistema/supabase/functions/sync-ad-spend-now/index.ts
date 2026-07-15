@@ -35,14 +35,26 @@ function jsonResponse(body: unknown, status = 200) {
 }
 
 class TokenExpiradoError extends Error {}
+class AppBloqueadoError extends Error {}
 
 async function graphGet(path: string, params: Record<string, string>) {
   const url = `${GRAPH_BASE}/${path}?${new URLSearchParams(params)}`
   const res = await fetch(url)
   const data = await res.json()
   if (!res.ok || data.error) {
-    if (data.error?.type === 'OAuthException' || data.error?.code === 190) {
+    // code 190 = token realmente inválido/expirado. code 200 ("API access blocked") é
+    // diferente — o App não tem acesso aprovado à Marketing API (mesmo bloqueio de fundo
+    // que impede criar o anúncio de verdade, aguardando a verificação de empresa da
+    // Meta) — trocar o token não resolve esse caso, então a mensagem precisa ser outra.
+    if (data.error?.code === 190) {
       throw new TokenExpiradoError('Token de acesso do Meta Ads expirado ou inválido.')
+    }
+    if (data.error?.type === 'OAuthException' && data.error?.code === 200) {
+      throw new AppBloqueadoError(
+        'API do Meta Ads bloqueada pro App (erro "API access blocked", code 200) — não é o token. ' +
+          'Provavelmente falta o App ter acesso aprovado à Marketing API, o que costuma ficar liberado ' +
+          'só depois da verificação de empresa da Meta (business.facebook.com/settings/security).',
+      )
     }
     const msg = data.error ? `${data.error.message} (code ${data.error.code})` : `HTTP ${res.status}`
     throw new Error(`Marketing API ${path} falhou: ${msg}`)
@@ -148,22 +160,32 @@ Deno.serve(async (req: Request) => {
         }
         results.push({ campaignId, days: insights.length, kind: 'synced' })
       } catch (err) {
-        const tokenExpirado = err instanceof TokenExpiradoError
-        results.push({
-          campaignId,
-          kind: tokenExpirado ? 'token_expirado' : 'error',
-          message: (err as Error).message,
-        })
+        const kind =
+          err instanceof TokenExpiradoError ? 'token_expirado' : err instanceof AppBloqueadoError ? 'app_bloqueado' : 'error'
+        results.push({ campaignId, kind, message: (err as Error).message })
       }
     }
   }
 
-  const algumTokenExpirado = results.some((r) => r.kind === 'token_expirado')
   const algumSucesso = results.some((r) => r.kind === 'synced')
+  const algumTokenExpirado = results.some((r) => r.kind === 'token_expirado')
+  const algumAppBloqueado = results.some((r) => r.kind === 'app_bloqueado')
 
   if (!algumSucesso && algumTokenExpirado) {
     return jsonResponse(
       { ok: false, error: 'Token de acesso do Meta Ads expirado ou inválido. Gere um novo em Business Settings → System Users.', results },
+      502,
+    )
+  }
+  if (!algumSucesso && algumAppBloqueado) {
+    return jsonResponse(
+      {
+        ok: false,
+        error:
+          'API do Meta Ads bloqueada pro App (não é o token) — provavelmente falta aprovação de acesso à Marketing API, ' +
+          'que costuma liberar só depois da verificação de empresa da Meta.',
+        results,
+      },
       502,
     )
   }
