@@ -31,7 +31,7 @@ export function LeadCard({
   const canRegisterSale = currentStage?.category === 'new' || currentStage?.category === 'in_progress'
 
   return (
-    <li className="rounded-xl border border-border bg-surface-2 p-3">
+    <li className="rounded-xl border border-border bg-surface-2 p-3 shadow-sm">
       <p className="font-medium">{lead.full_name}</p>
       <p className="mt-0.5 text-xs text-text-faint">
         {lead.phone_number || lead.email || 'sem contato'} · {channel?.label ?? 'canal desconhecido'}

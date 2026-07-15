@@ -3,9 +3,9 @@ import { useParams } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '../../lib/supabase'
 import { TenantSidebarLayout } from '../../components/TenantSidebarLayout'
+import { StatCard, STAT_ICONS } from '../../components/StatCard'
 import { formatarReais } from '../../lib/money'
 import { extrairErroFuncao } from '../../lib/functions-error'
-import { StatTile } from './StatTile'
 import type { AcquisitionChannel, Deal, Lead } from '../../lib/crm-types'
 
 type Payment = { amount_cents: number; status: 'pending' | 'paid' | 'overdue' }
@@ -145,118 +145,127 @@ export function FinanceiroPage() {
 
   return (
     <TenantSidebarLayout tenantId={tenantId}>
-      <h1 className="font-display text-xl font-semibold">Visão financeira</h1>
-        <p className="mt-1 text-sm text-text-dim">
-          Leads dos últimos {PERIODO_DIAS} dias · receita e CAC acumulados desde o início.
-        </p>
+      <header className="flex items-end justify-between">
+        <div>
+          <p className="eyebrow">Financeiro</p>
+          <h1 className="mt-2 font-display text-2xl font-semibold text-text">Visão financeira</h1>
+        </div>
+        <span className="hidden max-w-xs text-right text-xs text-text-faint md:block">
+          Leads dos últimos {PERIODO_DIAS} dias · receita e CAC acumulados desde o início
+        </span>
+      </header>
 
-        {loading && <p className="mt-6 text-text-dim">Carregando…</p>}
+      {loading && <p className="mt-6 text-text-dim">Carregando…</p>}
 
-        {!loading && (
-          <>
-            <div className="mt-6 grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-5">
-              <StatTile label={`Leads (${PERIODO_DIAS} dias)`} value={leads.length.toLocaleString('pt-BR')} />
-              <StatTile label="Receita fechada" value={formatarReais(receitaFechada)} />
-              <StatTile label="Receita a receber" value={formatarReais(receitaAReceber)} />
-              <StatTile
-                label={`Gasto de tráfego (${PERIODO_DIAS} dias)`}
-                value={formatarReais(gastoTotal)}
-                hint={adSpend.length === 0 ? 'sem sincronização ainda' : undefined}
-              />
-              <StatTile
-                label="CAC (canais pagos)"
-                value={cac === null ? '—' : formatarReais(cac)}
-                hint={vendasPorCanalPago === 0 ? 'nenhuma venda por canal pago ainda' : undefined}
-              />
-            </div>
+      {!loading && (
+        <>
+          <div className="mt-6 grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-5">
+            <StatCard label={`Leads (${PERIODO_DIAS} dias)`} value={leads.length.toLocaleString('pt-BR')} icon={STAT_ICONS.leads} badgeColor="var(--color-violet)" />
+            <StatCard label="Receita fechada" value={formatarReais(receitaFechada)} icon={STAT_ICONS.revenue} badgeColor="var(--color-cyan)" />
+            <StatCard label="Receita a receber" value={formatarReais(receitaAReceber)} icon={STAT_ICONS.pending} badgeColor="var(--color-cyan)" />
+            <StatCard
+              label={`Gasto de tráfego (${PERIODO_DIAS} dias)`}
+              value={formatarReais(gastoTotal)}
+              hint={adSpend.length === 0 ? 'sem sincronização ainda' : undefined}
+              icon={STAT_ICONS.spend}
+              badgeColor="var(--color-magenta)"
+            />
+            <StatCard
+              label="CAC (canais pagos)"
+              value={cac === null ? '—' : formatarReais(cac)}
+              hint={vendasPorCanalPago === 0 ? 'nenhuma venda por canal pago ainda' : undefined}
+              icon={STAT_ICONS.target}
+              badgeColor="var(--color-violet)"
+            />
+          </div>
 
-            <div className="mt-8 grid gap-6 lg:grid-cols-2">
-              <section>
-                <h2 className="text-sm font-medium text-text-dim">Leads por canal ({PERIODO_DIAS} dias)</h2>
-                <div className="mt-3 overflow-hidden rounded-xl border border-border">
-                  <table className="w-full text-sm">
-                    <thead>
-                      <tr className="border-b border-border bg-surface-2 text-left text-xs text-text-faint">
-                        <th className="px-3 py-2 font-medium">Canal</th>
-                        <th className="px-3 py-2 font-medium tabular-nums">Leads</th>
-                        <th className="px-3 py-2 font-medium tabular-nums">Receita</th>
+          <div className="mt-6 grid gap-4 lg:grid-cols-2">
+            <section className="card p-5">
+              <h2 className="text-sm font-medium text-text-dim">Leads por canal ({PERIODO_DIAS} dias)</h2>
+              <div className="mt-3 overflow-hidden rounded-xl border border-border">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b border-border bg-surface-2 text-left text-xs text-text-faint">
+                      <th className="px-3 py-2 font-medium">Canal</th>
+                      <th className="px-3 py-2 font-medium tabular-nums">Leads</th>
+                      <th className="px-3 py-2 font-medium tabular-nums">Receita</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {leadsPorCanal.map((row) => (
+                      <tr key={row.channel.id} className="border-b border-border last:border-0">
+                        <td className="px-3 py-2">{row.channel.label}</td>
+                        <td className="px-3 py-2 tabular-nums text-text-dim">{row.count}</td>
+                        <td className="px-3 py-2 tabular-nums text-text-dim">{formatarReais(row.receita)}</td>
                       </tr>
-                    </thead>
-                    <tbody>
-                      {leadsPorCanal.map((row) => (
-                        <tr key={row.channel.id} className="border-b border-border last:border-0">
-                          <td className="px-3 py-2">{row.channel.label}</td>
-                          <td className="px-3 py-2 tabular-nums text-text-dim">{row.count}</td>
-                          <td className="px-3 py-2 tabular-nums text-text-dim">{formatarReais(row.receita)}</td>
-                        </tr>
-                      ))}
-                      {leadsPorCanal.length === 0 && (
-                        <tr>
-                          <td colSpan={3} className="px-3 py-4 text-center text-text-faint">
-                            Nenhum lead nos últimos {PERIODO_DIAS} dias.
-                          </td>
-                        </tr>
-                      )}
-                    </tbody>
-                  </table>
-                </div>
-              </section>
-
-              <section>
-                <div className="flex items-center justify-between gap-3">
-                  <h2 className="text-sm font-medium text-text-dim">Gasto de tráfego por dia</h2>
-                  <button
-                    onClick={() => {
-                      setSyncOk(false)
-                      syncMutation.mutate()
-                    }}
-                    disabled={syncMutation.isPending}
-                    className="rounded-full border border-border px-3 py-1 text-xs font-medium text-text-dim hover:border-violet hover:text-text disabled:opacity-60"
-                  >
-                    {syncMutation.isPending ? 'Sincronizando…' : 'Sincronizar agora'}
-                  </button>
-                </div>
-                {syncError && <p className="mt-2 text-xs text-magenta">{syncError}</p>}
-                {syncOk && !syncMutation.isPending && (
-                  <p className="mt-2 text-xs text-cyan">Sincronizado.</p>
-                )}
-                <div className="mt-3 overflow-hidden rounded-xl border border-border">
-                  <table className="w-full text-sm">
-                    <thead>
-                      <tr className="border-b border-border bg-surface-2 text-left text-xs text-text-faint">
-                        <th className="px-3 py-2 font-medium">Dia</th>
-                        <th className="px-3 py-2 font-medium tabular-nums">Gasto</th>
-                        <th className="px-3 py-2 font-medium tabular-nums">Resultados</th>
-                        <th className="px-3 py-2 font-medium tabular-nums">CPA</th>
+                    ))}
+                    {leadsPorCanal.length === 0 && (
+                      <tr>
+                        <td colSpan={3} className="px-3 py-4 text-center text-text-faint">
+                          Nenhum lead nos últimos {PERIODO_DIAS} dias.
+                        </td>
                       </tr>
-                    </thead>
-                    <tbody>
-                      {adSpend.map((row) => (
-                        <tr key={row.date} className="border-b border-border last:border-0">
-                          <td className="px-3 py-2 tabular-nums">
-                            {new Date(row.date).toLocaleDateString('pt-BR')}
-                          </td>
-                          <td className="px-3 py-2 tabular-nums text-text-dim">{formatarReais(row.spend_cents)}</td>
-                          <td className="px-3 py-2 tabular-nums text-text-dim">{row.results_count}</td>
-                          <td className="px-3 py-2 tabular-nums text-text-dim">
-                            {row.cpa_cents === null ? '—' : formatarReais(row.cpa_cents)}
-                          </td>
-                        </tr>
-                      ))}
-                      {adSpend.length === 0 && (
-                        <tr>
-                          <td colSpan={4} className="px-3 py-4 text-center text-text-faint">
-                            Sem gasto sincronizado ainda — campanha pausada.
-                          </td>
-                        </tr>
-                      )}
-                    </tbody>
-                  </table>
-                </div>
-              </section>
-            </div>
-          </>
-        )}
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </section>
+
+            <section className="card p-5">
+              <div className="flex items-center justify-between gap-3">
+                <h2 className="text-sm font-medium text-text-dim">Gasto de tráfego por dia</h2>
+                <button
+                  onClick={() => {
+                    setSyncOk(false)
+                    syncMutation.mutate()
+                  }}
+                  disabled={syncMutation.isPending}
+                  className="rounded-full border border-border px-3 py-1 text-xs font-medium text-text-dim hover:border-violet hover:text-text disabled:opacity-60"
+                >
+                  {syncMutation.isPending ? 'Sincronizando…' : 'Sincronizar agora'}
+                </button>
+              </div>
+              {syncError && <p className="mt-2 text-xs text-magenta">{syncError}</p>}
+              {syncOk && !syncMutation.isPending && (
+                <p className="mt-2 text-xs text-cyan">Sincronizado.</p>
+              )}
+              <div className="mt-3 overflow-hidden rounded-xl border border-border">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b border-border bg-surface-2 text-left text-xs text-text-faint">
+                      <th className="px-3 py-2 font-medium">Dia</th>
+                      <th className="px-3 py-2 font-medium tabular-nums">Gasto</th>
+                      <th className="px-3 py-2 font-medium tabular-nums">Resultados</th>
+                      <th className="px-3 py-2 font-medium tabular-nums">CPA</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {adSpend.map((row) => (
+                      <tr key={row.date} className="border-b border-border last:border-0">
+                        <td className="px-3 py-2 tabular-nums">
+                          {new Date(row.date).toLocaleDateString('pt-BR')}
+                        </td>
+                        <td className="px-3 py-2 tabular-nums text-text-dim">{formatarReais(row.spend_cents)}</td>
+                        <td className="px-3 py-2 tabular-nums text-text-dim">{row.results_count}</td>
+                        <td className="px-3 py-2 tabular-nums text-text-dim">
+                          {row.cpa_cents === null ? '—' : formatarReais(row.cpa_cents)}
+                        </td>
+                      </tr>
+                    ))}
+                    {adSpend.length === 0 && (
+                      <tr>
+                        <td colSpan={4} className="px-3 py-4 text-center text-text-faint">
+                          Sem gasto sincronizado ainda — campanha pausada.
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </section>
+          </div>
+        </>
+      )}
     </TenantSidebarLayout>
   )
 }

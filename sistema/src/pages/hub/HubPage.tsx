@@ -160,9 +160,10 @@ export function HubPage() {
 
   return (
     <TenantSidebarLayout tenantId={tenantId}>
-      <div className="mb-6 flex items-center justify-between">
+      <header className="flex items-end justify-between">
         <div>
-          <h1 className="font-display text-xl font-semibold">Hub de integrações</h1>
+          <p className="eyebrow">Hub de integrações</p>
+          <h1 className="mt-2 font-display text-2xl font-semibold text-text">Automação de conteúdo</h1>
           <p className="mt-1 text-sm text-text-dim">
             Gera carrossel com IA e publica no Instagram sem sair do dashboard.
           </p>
@@ -173,18 +174,18 @@ export function HubPage() {
         >
           + Gerar carrossel
         </button>
-      </div>
+      </header>
 
-      {jobsQuery.isLoading && <p className="text-text-dim">Carregando…</p>}
+      {jobsQuery.isLoading && <p className="mt-6 text-text-dim">Carregando…</p>}
 
-      <ul className="flex flex-col gap-3">
+      <ul className="mt-6 flex flex-col gap-3">
           {jobs.map((job) => {
             const isCarrosselDone = job.tool === 'carrossel' && job.status === 'done' && job.result && 'images' in job.result
             const isInstagramDone = job.tool === 'instagram_post' && job.status === 'done' && job.result && 'permalink' in job.result
             const isPublishing = publishMutation.isPending && publishMutation.variables === job.id
 
             return (
-              <li key={job.id} className="rounded-xl border border-border bg-surface p-4">
+              <li key={job.id} className="card p-4">
                 <div className="flex items-start justify-between gap-4">
                   <div className="min-w-0 flex-1">
                     <span className="rounded-full bg-violet/15 px-2 py-0.5 text-xs text-violet">
