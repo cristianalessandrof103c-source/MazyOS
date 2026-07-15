@@ -106,7 +106,10 @@ export function SettingsPage() {
   return (
     <TenantSidebarLayout tenantId={tenantId}>
       <div className="mx-auto max-w-3xl">
-        <h1 className="font-display text-xl font-semibold">Configurações</h1>
+        <header>
+          <p className="eyebrow">Configurações</p>
+          <h1 className="mt-2 font-display text-2xl font-semibold text-text">Equipe e marca</h1>
+        </header>
 
         <section className="mt-8">
           <div className="mb-4 flex items-center justify-between">
@@ -127,7 +130,7 @@ export function SettingsPage() {
             {(membershipsQuery.data ?? []).map((m) => (
               <li
                 key={m.id}
-                className="flex items-center justify-between rounded-xl border border-border bg-surface px-4 py-3"
+                className="card flex items-center justify-between px-4 py-3"
               >
                 <div>
                   <p className="text-sm text-text">
@@ -158,7 +161,7 @@ export function SettingsPage() {
                 e.preventDefault()
                 brandingMutation.mutate()
               }}
-              className="mt-4 flex max-w-sm flex-col gap-4"
+              className="card mt-4 flex max-w-sm flex-col gap-4 p-5"
             >
               <label className="flex flex-col gap-1.5 text-sm text-text-dim">
                 Cor primária

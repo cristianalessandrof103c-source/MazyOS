@@ -37,7 +37,7 @@ export function ProspectRow({ tenantId, prospect }: { tenantId: string; prospect
   const isConverted = prospect.status === 'convertido'
 
   return (
-    <li className="rounded-xl border border-border bg-surface-2 p-3">
+    <li className="rounded-xl border border-border bg-surface-2 p-3 shadow-sm">
       <div className="flex items-start justify-between gap-4">
         <div>
           <p className="font-medium">{prospect.name}</p>

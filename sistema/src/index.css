@@ -1,47 +1,98 @@
+@import url('https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,600;12..96,700&family=IBM+Plex+Mono:wght@400;500&family=Inter:wght@300;400;500;600&display=swap');
 @import "tailwindcss";
 
-/*
-  Design tokens portados de saidas/site/styles.css (identidade "dark tech" da BK Solutions).
-  Servem como default de branding — cada tenant pode sobrescrever via companies.branding_json.
-*/
 @theme {
   --color-bg: #06070c;
   --color-bg-alt: #0a0c16;
   --color-surface: #10121e;
   --color-surface-2: #161927;
-  --color-border: rgba(255, 255, 255, 0.08);
+  --color-border: rgba(255,255,255,.08);
   --color-text: #eef0f6;
   --color-text-dim: #9a9db3;
   --color-text-faint: #656984;
   --color-violet: #8b5cf6;
   --color-cyan: #22d3ee;
-  --color-magenta: #ec4899;
+  --color-magenta: #ff6b56;
 
-  --font-display: "Space Grotesk", sans-serif;
+  /*
+    A sidebar não muda com o tema claro/escuro — o dono pediu pra manter sempre a
+    coluna escura (mesma cor do tema dark), então esses tokens ficam fora dos blocos
+    [data-theme] abaixo, constantes nos dois temas.
+  */
+  --color-sidebar: #0a0c16;
+  --color-sidebar-surface: #161927;
+  --color-sidebar-border: rgba(255,255,255,.08);
+  --color-sidebar-fg: #eef0f6;
+  --color-sidebar-fg-dim: #9a9db3;
+  --color-sidebar-fg-faint: #656984;
+
+  --font-display: "Bricolage Grotesque", sans-serif;
   --font-body: "Inter", sans-serif;
+  --font-mono: "IBM Plex Mono", monospace;
+}
+
+/*
+  Tema editável (claro/escuro). O <head> de index.html já aplica data-theme no <html>
+  antes do primeiro paint (localStorage > prefers-color-scheme, default escuro), então não
+  há flash de tema errado. useTheme()/ThemeToggle só alternam esse atributo em runtime.
+*/
+:root[data-theme='dark'] {
+  --color-bg: #06070c;
+  --color-bg-alt: #0a0c16;
+  --color-surface: #10121e;
+  --color-surface-2: #161927;
+  --color-border: rgba(255,255,255,.08);
+  --color-text: #eef0f6;
+  --color-text-dim: #9a9db3;
+  --color-text-faint: #656984;
+  --color-violet: #8b5cf6;
+  --color-cyan: #22d3ee;
+  --color-magenta: #ff6b56;
+  --shadow-card: 0 1px 2px rgba(0,0,0,.35), 0 10px 24px -14px rgba(0,0,0,.55);
+}
+
+:root[data-theme='light'] {
+  --color-bg: #e7e7ec;
+  --color-bg-alt: #dedee4;
+  --color-surface: #f6f6f8;
+  --color-surface-2: #ebebf0;
+  --color-border: rgba(15,15,25,.1);
+  --color-text: #14151d;
+  --color-text-dim: #55586b;
+  --color-text-faint: #8a8da3;
+  --color-violet: #7c3aed;
+  --color-cyan: #0e7490;
+  --color-magenta: #dc2626;
+  --shadow-card: 0 1px 2px rgba(20,20,30,.04), 0 10px 24px -14px rgba(20,20,30,.12);
 }
 
 @layer base {
-  * {
-    margin: 0;
-    padding: 0;
-    box-sizing: border-box;
-  }
-
-  html {
-    scroll-behavior: smooth;
-  }
-
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
   body {
+    margin: 0;
     background: var(--color-bg);
     color: var(--color-text);
     font-family: var(--font-body);
-    font-weight: 300;
+    font-weight: 400;
     line-height: 1.5;
+    transition: background-color .15s ease, color .15s ease;
   }
+  button, a { -webkit-tap-highlight-color: transparent; }
+  button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible { outline: 2px solid var(--color-violet); outline-offset: 3px; }
+  ::selection { background: var(--color-violet); color: #090a0d; }
+}
 
-  ::selection {
-    background: var(--color-violet);
-    color: #fff;
-  }
+@layer components {
+  .app-shell { min-height: 100vh; }
+  .app-main { width: 100%; max-width: 1680px; margin-inline: auto; }
+  .eyebrow { font: 500 .68rem/1 var(--font-mono); letter-spacing: .16em; text-transform: uppercase; color: var(--color-text-faint); }
+  .metric-number { font-family: var(--font-mono); letter-spacing: -.03em; }
+  .card { border: 1px solid var(--color-border); background: var(--color-surface); border-radius: 1rem; box-shadow: var(--shadow-card); }
+  .icon-badge { display: inline-flex; align-items: center; justify-content: center; width: 2rem; height: 2rem; border-radius: .625rem; flex-shrink: 0; }
+  .brand-glow { box-shadow: 0 0 32px color-mix(in srgb,var(--color-violet) 17%,transparent); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { scroll-behavior: auto !important; transition-duration: .01ms !important; animation-duration: .01ms !important; }
 }

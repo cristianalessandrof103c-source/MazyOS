@@ -3,11 +3,11 @@ import { useParams } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { supabase } from '../../lib/supabase'
 import { TenantSidebarLayout } from '../../components/TenantSidebarLayout'
+import { StatCard, STAT_ICONS } from '../../components/StatCard'
 import { formatarReais } from '../../lib/money'
 import { lastNDays, bucketByDay } from '../../lib/timeseries'
 import { TimeSeriesChart } from '../../components/charts/TimeSeriesChart'
 import { HorizontalBarChart } from '../../components/charts/HorizontalBarChart'
-import { StatTile } from '../financeiro/StatTile'
 import type { AcquisitionChannel, Deal, Lead } from '../../lib/crm-types'
 
 type Payment = { amount_cents: number; status: 'pending' | 'paid' | 'overdue' }
@@ -117,31 +117,57 @@ export function OverviewPage() {
 
   return (
     <TenantSidebarLayout tenantId={tenantId}>
-      <h1 className="font-display text-xl font-semibold">Visão geral</h1>
-      <p className="mt-1 text-sm text-text-dim">Últimos {PERIODO_DIAS} dias.</p>
+      <header className="flex items-end justify-between">
+        <div>
+          <p className="eyebrow">Painel de operação · {PERIODO_DIAS} dias</p>
+          <h1 className="mt-2 font-display text-2xl font-semibold text-text">Visão geral</h1>
+        </div>
+        <span className="hidden text-xs text-text-faint md:block">Dados em tempo real</span>
+      </header>
 
       {loading && <p className="mt-6 text-text-dim">Carregando…</p>}
 
       {!loading && (
         <>
-          <div className="mt-6 grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-5">
-            <StatTile label={`Leads (${PERIODO_DIAS} dias)`} value={leads.length.toLocaleString('pt-BR')} />
-            <StatTile label="Receita fechada" value={formatarReais(receitaFechada)} />
-            <StatTile label="Receita a receber" value={formatarReais(receitaAReceber)} />
-            <StatTile
-              label={`Gasto de tráfego (${PERIODO_DIAS} dias)`}
+          <div className="mt-6 grid grid-cols-2 gap-4 lg:grid-cols-5">
+            <StatCard
+              label="Gasto de tráfego"
               value={formatarReais(gastoTotal)}
-              hint={adSpend.length === 0 ? 'sem sincronização ainda' : undefined}
+              icon={STAT_ICONS.spend}
+              badgeColor="var(--color-magenta)"
+              sparkline={gastoPorDia}
             />
-            <StatTile
+            <StatCard
+              label="Leads captados"
+              value={leads.length.toLocaleString('pt-BR')}
+              icon={STAT_ICONS.leads}
+              badgeColor="var(--color-violet)"
+              sparkline={leadsPorDia}
+            />
+            <StatCard
+              label="Receita fechada"
+              value={formatarReais(receitaFechada)}
+              icon={STAT_ICONS.revenue}
+              badgeColor="var(--color-cyan)"
+              sparkline={receitaPorDia}
+            />
+            <StatCard
+              label="Receita a receber"
+              value={formatarReais(receitaAReceber)}
+              icon={STAT_ICONS.pending}
+              badgeColor="var(--color-cyan)"
+            />
+            <StatCard
               label="CAC (canais pagos)"
               value={cac === null ? '—' : formatarReais(cac)}
-              hint={vendasPorCanalPago === 0 ? 'nenhuma venda por canal pago ainda' : undefined}
+              hint={vendasPorCanalPago === 0 ? 'sem venda por canal pago ainda' : 'dado real'}
+              icon={STAT_ICONS.target}
+              badgeColor="var(--color-violet)"
             />
           </div>
 
-          <div className="mt-8 grid gap-6 lg:grid-cols-2">
-            <section className="rounded-xl border border-border bg-surface p-5">
+          <div className="mt-6 grid gap-4 lg:grid-cols-2">
+            <section className="card p-5">
               <h2 className="text-sm font-medium text-text-dim">Leads por dia</h2>
               <div className="mt-4">
                 <TimeSeriesChart
@@ -151,7 +177,7 @@ export function OverviewPage() {
               </div>
             </section>
 
-            <section className="rounded-xl border border-border bg-surface p-5">
+            <section className="card p-5">
               <h2 className="text-sm font-medium text-text-dim">Receita × gasto de tráfego</h2>
               <div className="mt-4">
                 <TimeSeriesChart
@@ -165,7 +191,7 @@ export function OverviewPage() {
             </section>
           </div>
 
-          <section className="mt-6 rounded-xl border border-border bg-surface p-5">
+          <section className="card mt-4 p-5">
             <h2 className="text-sm font-medium text-text-dim">Leads por canal ({PERIODO_DIAS} dias)</h2>
             <div className="mt-4">
               <HorizontalBarChart data={leadsPorCanal} color={CHART_VIOLET} />

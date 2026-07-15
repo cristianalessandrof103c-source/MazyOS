@@ -68,8 +68,11 @@ export function CrmPage() {
 
   return (
     <TenantSidebarLayout tenantId={tenantId}>
-      <div className="mb-6 flex items-center justify-between">
-        <h1 className="font-display text-xl font-semibold">Pipeline de leads</h1>
+      <header className="flex items-end justify-between">
+        <div>
+          <p className="eyebrow">CRM</p>
+          <h1 className="mt-2 font-display text-2xl font-semibold text-text">Pipeline de leads</h1>
+        </div>
         {newStage && (
           <button
             onClick={() => setShowNewLead(true)}
@@ -78,12 +81,12 @@ export function CrmPage() {
             + Novo lead
           </button>
         )}
-      </div>
+      </header>
 
-      {loading && <p className="text-text-dim">Carregando…</p>}
+      {loading && <p className="mt-6 text-text-dim">Carregando…</p>}
 
       {!loading && (
-        <div className="flex gap-4 overflow-x-auto pb-4">
+        <div className="mt-6 flex gap-4 overflow-x-auto pb-4">
           {stages.map((stage) => {
             const stageLeads = leads.filter((l) => l.stage_id === stage.id)
             return (

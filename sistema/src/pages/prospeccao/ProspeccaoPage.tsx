@@ -92,14 +92,15 @@ export function ProspeccaoPage() {
 
   return (
     <TenantSidebarLayout tenantId={tenantId}>
-      <div className="mb-6">
-        <h1 className="font-display text-xl font-semibold">Prospecção</h1>
+      <header>
+        <p className="eyebrow">Prospecção</p>
+        <h1 className="mt-2 font-display text-2xl font-semibold text-text">Encontrar novos clientes</h1>
         <p className="mt-1 text-sm text-text-dim">
           Busque empresas por nicho e região (Google Maps) e qualifique manualmente antes de virar lead no CRM.
         </p>
-      </div>
+      </header>
 
-      <form onSubmit={handleSearch} className="mb-6 flex flex-wrap items-end gap-3 rounded-xl border border-border bg-surface p-4">
+      <form onSubmit={handleSearch} className="card mt-6 mb-6 flex flex-wrap items-end gap-3 p-4">
         <label className="flex flex-col gap-1.5 text-sm text-text-dim">
           Nicho
           <input
@@ -150,7 +151,7 @@ export function ProspeccaoPage() {
       </form>
 
       {jobQuery.data && (
-        <div className="mb-6 rounded-xl border border-border bg-surface p-4">
+        <div className="card mb-6 p-4">
           <div className="mb-2 flex items-center justify-between text-sm">
             <span className="text-text-dim">
               {jobQuery.data.status === 'processing' && 'Extraindo em lote…'}
