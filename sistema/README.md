@@ -523,6 +523,61 @@ corrigido pra diferenciar os dois casos e apontar a causa certa.
    bloqueada pro App e a campanha real (`120246235146860014`) continua `PAUSED`, sem
    gasto de verdade pra sincronizar (o botão funciona, mas mostra zero até lá).
 
+## Fase 9 — Disparo em massa (broadcast) + importação de contatos via CSV (código pronto, aguardando Template da Meta e deploy manual)
+
+Pedido do dono (2026-07-21): rodar campanhas de disparo em massa via WhatsApp ainda no
+mesmo dia. Diferente do agente de IA (Fase 2) e do follow-up automático (Fase 3), que só
+respondem/reengajam leads já existentes no funil de CRM dentro da janela de 24h, isso é
+mensagem fria pra uma lista de contatos importada via CSV — obrigatoriamente via
+**Template pré-aprovado pela Meta** (`type: 'template'`), que ainda não existe. O código
+foi construído assumindo esse Template desde já; o disparo real só funciona de verdade
+depois que o dono criar um e a Meta aprovar.
+
+- `supabase/migrations/0015_whatsapp_broadcast.sql` — 4 tabelas novas
+  (`broadcast_lists`, `broadcast_contacts`, `broadcast_campaigns`,
+  `broadcast_campaign_recipients`), coluna `daily_send_cap` em `whatsapp_connections`
+  (teto de envio numa janela rolante de 24h, proteção contra estourar o messaging tier
+  da Meta), 2 RPCs `security definer` (`start_broadcast_campaign` faz o fan-out
+  draft→sending como `insert...select` atômico; `claim_broadcast_recipients` reivindica
+  lotes com `FOR UPDATE SKIP LOCKED`, evitando 2 execuções do cron pegarem a mesma
+  linha), índice único parcial que só deixa 1 campanha `sending` por conexão de
+  WhatsApp, e o `cron.schedule('broadcast-dispatcher-tick', ...)` (mesmo padrão da Fase
+  8). Lista de contatos é **separada do funil de leads/CRM** por decisão do dono — não
+  vira lead automaticamente.
+- `_shared/whatsapp-api.ts` — nova função `enviarMensagemTemplate()` ao lado da
+  `enviarMensagemTexto()` já existente.
+- `supabase/functions/broadcast-import-contacts/` — recebe o CSV já parseado no client
+  (Papaparse), normaliza telefone pro formato BR (`55DDNNNNNNNNN`, mesmo formato que
+  `whatsapp-webhook` já usa), dedup e upsert em lote.
+- `supabase/functions/broadcast-campaign-control/` — uma function só cobrindo
+  start/pause/resume/test de campanha (menos deploys manuais). `test` manda 1 mensagem
+  pro número que o dono digitar, sem tocar na lista real — único jeito barato de validar
+  nome do Template/quantidade de variáveis antes de disparar de verdade.
+- `supabase/functions/broadcast-dispatcher/` — chamada por `pg_cron` a cada 1min, mesmo
+  padrão de `follow-up-dispatcher`/`prospeccao-worker`: processa campanhas `sending` em
+  lotes de 20 destinatários, ~400ms entre envios, classifica erro permanente
+  (número/template inválido) vs. transiente (retry até 3 tentativas), respeita o
+  `daily_send_cap` da conexão.
+- Página `/disparos/:tenantId` (link "Disparos" na sidebar, logo após Prospecção):
+  listas de contatos → importar CSV (preview com normalização de telefone antes de
+  enviar) → criar campanha (Template + mapeamento de variáveis) → acompanhar progresso
+  com polling.
+- **As 3 Edge Functions ficaram autocontidas (sem `_shared/`)**, mesmo motivo de
+  `prospeccao-buscar`/`prospeccao-worker` (deploy manual via editor web, uma function
+  por vez).
+- Nova dependência no frontend: `papaparse` — única lib nova do projeto, justificada por
+  robustez de parsing de CSV real (aspas, BOM, vírgula dentro de campo).
+
+### Pendente
+
+1. Aplicar `0015_whatsapp_broadcast.sql` via SQL Editor do Supabase.
+2. Deploy manual das 3 Edge Functions via editor web (`broadcast-dispatcher` com
+   verificação de JWT desligada, as outras duas com verificação ligada).
+3. Criar e aprovar um Template de mensagem na Meta — sem isso, `enviarMensagemTemplate`
+   sempre falha (é o mesmo bloqueio de Template pendente já registrado nas Fases 3 e 6).
+4. Testar ponta a ponta: lista pequena → importar CSV de teste → ação "Testar" →
+   "Iniciar" só depois de confirmar que o Template está certo.
+
 ## Rodando localmente
 
 ```bash
