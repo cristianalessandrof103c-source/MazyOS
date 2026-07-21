@@ -6,6 +6,7 @@ import { DashboardPage } from './pages/DashboardPage'
 import { OverviewPage } from './pages/overview/OverviewPage'
 import { CrmPage } from './pages/crm/CrmPage'
 import { ProspeccaoPage } from './pages/prospeccao/ProspeccaoPage'
+import { BroadcastPage } from './pages/broadcast/BroadcastPage'
 import { FinanceiroPage } from './pages/financeiro/FinanceiroPage'
 import { CerebroPage } from './pages/cerebro/CerebroPage'
 import { HubPage } from './pages/hub/HubPage'
@@ -52,6 +53,14 @@ function App() {
         element={
           <ProtectedRoute>
             <ProspeccaoPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/disparos/:tenantId"
+        element={
+          <ProtectedRoute>
+            <BroadcastPage />
           </ProtectedRoute>
         }
       />
