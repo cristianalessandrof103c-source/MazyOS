@@ -1,69 +1,43 @@
 @import url('https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,600;12..96,700&family=IBM+Plex+Mono:wght@400;500&family=Inter:wght@300;400;500;600&display=swap');
 @import "tailwindcss";
 
+/*
+  Design system único (sem alternância claro/escuro — decisão do dono no redesign
+  premium, referência Linear/Stripe/Vercel/Raycast/Attio, todas dark-only). Tokens de
+  cor viram classes utilitárias automaticamente (Tailwind v4 CSS-first, sem
+  tailwind.config.*) — trocar um valor aqui já propaga pro app inteiro.
+*/
 @theme {
-  --color-bg: #06070c;
-  --color-bg-alt: #0a0c16;
-  --color-surface: #10121e;
-  --color-surface-2: #161927;
-  --color-border: rgba(255,255,255,.08);
-  --color-text: #eef0f6;
-  --color-text-dim: #9a9db3;
-  --color-text-faint: #656984;
-  --color-violet: #8b5cf6;
-  --color-cyan: #22d3ee;
-  --color-magenta: #ff6b56;
+  --color-bg: #09090b;
+  --color-bg-alt: #0c0d11;
+  --color-surface: #111217;
+  --color-surface-2: #171923;
+  --color-border: #262b36;
+  --color-text: #f8fafc;
+  --color-text-dim: #94a3b8;
+  --color-text-faint: #64748b;
+  --color-violet: #7c3aed;
+  --color-cyan: #06b6d4;
+  --color-magenta: #ef4444;
+  --color-success: #10b981;
+  --color-warning: #f59e0b;
+  --shadow-card: 0 1px 2px rgba(0,0,0,.35), 0 10px 40px -12px rgba(0,0,0,.55);
 
-  /*
-    A sidebar não muda com o tema claro/escuro — o dono pediu pra manter sempre a
-    coluna escura (mesma cor do tema dark), então esses tokens ficam fora dos blocos
-    [data-theme] abaixo, constantes nos dois temas.
-  */
-  --color-sidebar: #0a0c16;
-  --color-sidebar-surface: #161927;
-  --color-sidebar-border: rgba(255,255,255,.08);
-  --color-sidebar-fg: #eef0f6;
-  --color-sidebar-fg-dim: #9a9db3;
-  --color-sidebar-fg-faint: #656984;
+  /* Sidebar sempre escura, independente de qualquer customização de marca por tenant. */
+  --color-sidebar: #0a0b0f;
+  --color-sidebar-surface: #171923;
+  --color-sidebar-border: #262b36;
+  --color-sidebar-fg: #f8fafc;
+  --color-sidebar-fg-dim: #94a3b8;
+  --color-sidebar-fg-faint: #64748b;
 
   --font-display: "Bricolage Grotesque", sans-serif;
   --font-body: "Inter", sans-serif;
   --font-mono: "IBM Plex Mono", monospace;
-}
 
-/*
-  Tema editável (claro/escuro). O <head> de index.html já aplica data-theme no <html>
-  antes do primeiro paint (localStorage > prefers-color-scheme, default escuro), então não
-  há flash de tema errado. useTheme()/ThemeToggle só alternam esse atributo em runtime.
-*/
-:root[data-theme='dark'] {
-  --color-bg: #06070c;
-  --color-bg-alt: #0a0c16;
-  --color-surface: #10121e;
-  --color-surface-2: #161927;
-  --color-border: rgba(255,255,255,.08);
-  --color-text: #eef0f6;
-  --color-text-dim: #9a9db3;
-  --color-text-faint: #656984;
-  --color-violet: #8b5cf6;
-  --color-cyan: #22d3ee;
-  --color-magenta: #ff6b56;
-  --shadow-card: 0 1px 2px rgba(0,0,0,.35), 0 10px 24px -14px rgba(0,0,0,.55);
-}
-
-:root[data-theme='light'] {
-  --color-bg: #e7e7ec;
-  --color-bg-alt: #dedee4;
-  --color-surface: #f6f6f8;
-  --color-surface-2: #ebebf0;
-  --color-border: rgba(15,15,25,.1);
-  --color-text: #14151d;
-  --color-text-dim: #55586b;
-  --color-text-faint: #8a8da3;
-  --color-violet: #7c3aed;
-  --color-cyan: #0e7490;
-  --color-magenta: #dc2626;
-  --shadow-card: 0 1px 2px rgba(20,20,30,.04), 0 10px 24px -14px rgba(20,20,30,.12);
+  /* Escala tipográfica do design system: títulos de seção (22px) e valor de KPI (44px). */
+  --text-section: 1.375rem;
+  --text-kpi: 2.75rem;
 }
 
 @layer base {
@@ -76,11 +50,10 @@
     font-family: var(--font-body);
     font-weight: 400;
     line-height: 1.5;
-    transition: background-color .15s ease, color .15s ease;
   }
   button, a { -webkit-tap-highlight-color: transparent; }
   button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible { outline: 2px solid var(--color-violet); outline-offset: 3px; }
-  ::selection { background: var(--color-violet); color: #090a0d; }
+  ::selection { background: var(--color-violet); color: #f8fafc; }
 }
 
 @layer components {
@@ -88,9 +61,59 @@
   .app-main { width: 100%; max-width: 1680px; margin-inline: auto; }
   .eyebrow { font: 500 .68rem/1 var(--font-mono); letter-spacing: .16em; text-transform: uppercase; color: var(--color-text-faint); }
   .metric-number { font-family: var(--font-mono); letter-spacing: -.03em; }
-  .card { border: 1px solid var(--color-border); background: var(--color-surface); border-radius: 1rem; box-shadow: var(--shadow-card); }
-  .icon-badge { display: inline-flex; align-items: center; justify-content: center; width: 2rem; height: 2rem; border-radius: .625rem; flex-shrink: 0; }
+
+  .card {
+    border: 1px solid var(--color-border);
+    background: var(--color-surface);
+    border-radius: 1.25rem;
+    box-shadow: var(--shadow-card);
+  }
+
+  /* Cards interativos (item de lista, KPI) — não usar em painéis estáticos nem no Modal,
+     que reaproveita .card pro corpo do diálogo (um diálogo não deve "levitar" no hover). */
+  .card-hover {
+    transition: transform .25s ease, background-color .25s ease, box-shadow .25s ease;
+  }
+  .card-hover:hover {
+    transform: translateY(-2px);
+    background: var(--color-surface-2);
+    box-shadow: 0 1px 2px rgba(0,0,0,.4), 0 20px 48px -12px rgba(0,0,0,.65);
+  }
+
+  .icon-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 2.5rem;
+    height: 2.5rem;
+    border-radius: 999px;
+    flex-shrink: 0;
+  }
+
   .brand-glow { box-shadow: 0 0 32px color-mix(in srgb,var(--color-violet) 17%,transparent); }
+
+  /* Botão sólido premium (Linear/Stripe/Vercel) — substitui o pill com gradiente antigo. */
+  .btn-primary {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: .5rem;
+    border-radius: .625rem;
+    background: var(--color-violet);
+    color: #f8fafc;
+    font-weight: 500;
+    transition: background-color .2s ease, transform .2s ease;
+  }
+  .btn-primary:hover:not(:disabled) { background: #8b5cf6; }
+  .btn-primary:active:not(:disabled) { transform: scale(.98); }
+  .btn-primary:disabled { opacity: .6; }
+
+  .chart-enter { animation: chart-fade-in .5s ease both; }
+}
+
+@keyframes chart-fade-in {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
 @media (prefers-reduced-motion: reduce) {

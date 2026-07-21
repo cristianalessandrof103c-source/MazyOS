@@ -17,7 +17,7 @@ const STATUS_LABEL: Record<Membership['status'], string> = {
 
 const STATUS_STYLE: Record<Membership['status'], string> = {
   invited: 'bg-surface-2 text-text-dim',
-  active: 'bg-cyan/15 text-cyan',
+  active: 'bg-success/15 text-success',
   disabled: 'bg-magenta/15 text-magenta',
 }
 
@@ -108,17 +108,14 @@ export function SettingsPage() {
       <div className="mx-auto max-w-3xl">
         <header>
           <p className="eyebrow">Configurações</p>
-          <h1 className="mt-2 font-display text-2xl font-semibold text-text">Equipe e marca</h1>
+          <h1 className="mt-2 font-display text-4xl font-bold text-text">Equipe e marca</h1>
         </header>
 
         <section className="mt-8">
           <div className="mb-4 flex items-center justify-between">
-            <h2 className="font-display text-lg font-semibold">Equipe</h2>
+            <h2 className="text-section font-semibold text-text">Equipe</h2>
             {isTenantAdmin && (
-              <button
-                onClick={() => setShowInvite(true)}
-                className="rounded-full bg-gradient-to-r from-violet to-cyan px-4 py-2 text-sm font-medium text-bg"
-              >
+              <button onClick={() => setShowInvite(true)} className="btn-primary px-4 py-2 text-sm">
                 + Convidar
               </button>
             )}
@@ -126,11 +123,11 @@ export function SettingsPage() {
 
           {membershipsQuery.isLoading && <p className="text-text-dim">Carregando…</p>}
 
-          <ul className="flex flex-col gap-2">
+          <ul className="flex flex-col gap-3">
             {(membershipsQuery.data ?? []).map((m) => (
               <li
                 key={m.id}
-                className="card flex items-center justify-between px-4 py-3"
+                className="card card-hover flex items-center justify-between px-5 py-4"
               >
                 <div>
                   <p className="text-sm text-text">
@@ -151,7 +148,7 @@ export function SettingsPage() {
 
         {isTenantAdmin && (
           <section className="mt-10">
-            <h2 className="font-display text-lg font-semibold">Marca</h2>
+            <h2 className="text-section font-semibold text-text">Marca</h2>
             <p className="mt-1 text-sm text-text-dim">
               Cor de destaque e logo aplicados nas páginas desse tenant.
             </p>
@@ -161,7 +158,7 @@ export function SettingsPage() {
                 e.preventDefault()
                 brandingMutation.mutate()
               }}
-              className="card mt-4 flex max-w-sm flex-col gap-4 p-5"
+              className="card mt-4 flex max-w-sm flex-col gap-4 p-7"
             >
               <label className="flex flex-col gap-1.5 text-sm text-text-dim">
                 Cor primária
@@ -185,11 +182,7 @@ export function SettingsPage() {
 
               {brandingError && <p className="text-sm text-magenta">{brandingError}</p>}
 
-              <button
-                type="submit"
-                disabled={brandingMutation.isPending}
-                className="self-start rounded-full bg-gradient-to-r from-violet to-cyan px-4 py-2 text-sm font-medium text-bg disabled:opacity-60"
-              >
+              <button type="submit" disabled={brandingMutation.isPending} className="btn-primary self-start px-4 py-2 text-sm">
                 {brandingMutation.isPending ? 'Salvando…' : 'Salvar marca'}
               </button>
             </form>

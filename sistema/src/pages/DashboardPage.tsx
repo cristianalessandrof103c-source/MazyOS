@@ -46,19 +46,19 @@ export function DashboardPage() {
       </header>
 
       <main className="mx-auto max-w-3xl px-6 py-10">
-        <h1 className="font-display text-xl font-semibold">Empresas</h1>
-        <p className="mt-1 text-sm text-text-dim">
+        <h1 className="font-display text-4xl font-bold text-text">Empresas</h1>
+        <p className="mt-2 text-sm text-text-dim">
           Tenants visíveis pra esse usuário (via RLS + claims do JWT).
         </p>
 
-        {isLoading && <p className="mt-6 text-text-dim">Carregando…</p>}
+        {isLoading && <p className="mt-8 text-text-dim">Carregando…</p>}
 
-        <ul className="mt-6 flex flex-col gap-3">
+        <ul className="mt-8 flex flex-col gap-4">
           {companies?.map((company) => (
             <li key={company.id}>
               <Link
                 to={`/visao-geral/${company.id}`}
-                className="flex items-center justify-between rounded-xl border border-border bg-surface px-4 py-3 hover:border-violet/50"
+                className="card card-hover flex items-center justify-between px-5 py-4 hover:border-violet/50"
               >
                 <div>
                   <p className="font-medium">{company.name}</p>

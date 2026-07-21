@@ -2,7 +2,6 @@ import { useState, type FormEvent } from 'react'
 import { Navigate, useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { supabase } from '../lib/supabase'
-import { ThemeToggle } from '../components/ThemeToggle'
 
 // Link de convite/recuperação de senha do Supabase já autentica ao carregar a página (a
 // sessão vem no hash da URL) — sem isso o usuário cairia direto no dashboard com uma senha
@@ -11,6 +10,27 @@ function isSettingPasswordFlow(): boolean {
   const params = new URLSearchParams(window.location.hash.replace(/^#/, ''))
   const type = params.get('type')
   return type === 'invite' || type === 'recovery'
+}
+
+// Logo oficial ainda não foi integrada (sistema/public/logo-bk-solutions.png) — até lá,
+// cai automaticamente pro wordmark em texto via onError, sem quebrar a tela.
+function LoginBrand() {
+  const [imgFailed, setImgFailed] = useState(false)
+  if (imgFailed) {
+    return (
+      <h1 className="font-display bg-gradient-to-r from-violet to-cyan bg-clip-text text-2xl font-semibold text-transparent">
+        BK Solutions
+      </h1>
+    )
+  }
+  return (
+    <img
+      src="/logo-bk-solutions.png"
+      alt="BK Solutions"
+      className="h-14 w-auto"
+      onError={() => setImgFailed(true)}
+    />
+  )
 }
 
 export function LoginPage() {
@@ -49,18 +69,10 @@ export function LoginPage() {
 
   if (session && settingPassword) {
     return (
-      <div className="relative flex min-h-screen items-center justify-center bg-bg px-4">
-        <div className="absolute right-4 top-4">
-          <ThemeToggle />
-        </div>
-        <form
-          onSubmit={handleSetPassword}
-          className="w-full max-w-sm rounded-2xl border border-border bg-surface p-8"
-        >
-          <h1 className="font-display bg-gradient-to-r from-violet to-cyan bg-clip-text text-2xl font-semibold text-transparent">
-            BK Solutions
-          </h1>
-          <p className="mt-1 text-sm text-text-dim">Defina sua senha pra continuar</p>
+      <div className="flex min-h-screen items-center justify-center bg-bg px-4">
+        <form onSubmit={handleSetPassword} className="card w-full max-w-sm p-8">
+          <LoginBrand />
+          <p className="mt-3 text-sm text-text-dim">Defina sua senha pra continuar</p>
 
           <div className="mt-6 flex flex-col gap-4">
             <label className="flex flex-col gap-1.5 text-sm text-text-dim">
@@ -78,11 +90,7 @@ export function LoginPage() {
 
             {error && <p className="text-sm text-magenta">{error}</p>}
 
-            <button
-              type="submit"
-              disabled={submitting}
-              className="mt-2 rounded-full bg-gradient-to-r from-violet to-cyan px-4 py-2 font-medium text-bg disabled:opacity-60"
-            >
+            <button type="submit" disabled={submitting} className="btn-primary mt-2 px-4 py-2.5">
               {submitting ? 'Salvando…' : 'Definir senha e entrar'}
             </button>
           </div>
@@ -92,18 +100,10 @@ export function LoginPage() {
   }
 
   return (
-    <div className="relative flex min-h-screen items-center justify-center bg-bg px-4">
-      <div className="absolute right-4 top-4">
-        <ThemeToggle />
-      </div>
-      <form
-        onSubmit={handleSubmit}
-        className="w-full max-w-sm rounded-2xl border border-border bg-surface p-8"
-      >
-        <h1 className="font-display bg-gradient-to-r from-violet to-cyan bg-clip-text text-2xl font-semibold text-transparent">
-          BK Solutions
-        </h1>
-        <p className="mt-1 text-sm text-text-dim">Entrar no sistema</p>
+    <div className="flex min-h-screen items-center justify-center bg-bg px-4">
+      <form onSubmit={handleSubmit} className="card w-full max-w-sm p-8">
+        <LoginBrand />
+        <p className="mt-3 text-sm text-text-dim">Entrar no sistema</p>
 
         <div className="mt-6 flex flex-col gap-4">
           <label className="flex flex-col gap-1.5 text-sm text-text-dim">
@@ -132,11 +132,7 @@ export function LoginPage() {
 
           {error && <p className="text-sm text-magenta">{error}</p>}
 
-          <button
-            type="submit"
-            disabled={submitting}
-            className="mt-2 rounded-full bg-gradient-to-r from-violet to-cyan px-4 py-2 font-medium text-bg disabled:opacity-60"
-          >
+          <button type="submit" disabled={submitting} className="btn-primary mt-2 px-4 py-2.5">
             {submitting ? 'Entrando…' : 'Entrar'}
           </button>
         </div>

@@ -15,8 +15,8 @@ const STATUS_LABEL: Record<BroadcastCampaign['status'], string> = {
 const STATUS_STYLE: Record<BroadcastCampaign['status'], string> = {
   draft: 'bg-surface-2 text-text-dim',
   sending: 'bg-cyan/15 text-cyan',
-  paused: 'bg-surface-2 text-text-dim',
-  done: 'bg-violet/15 text-violet',
+  paused: 'bg-warning/15 text-warning',
+  done: 'bg-success/15 text-success',
   failed: 'bg-magenta/15 text-magenta',
 }
 
@@ -73,7 +73,7 @@ export function CampaignCard({ tenantId, campaign, isTenantAdmin }: { tenantId: 
   const progressPct = campaign.total_recipients > 0 ? Math.min(100, (totalDone / campaign.total_recipients) * 100) : 0
 
   return (
-    <li className="card flex flex-col gap-3 p-4">
+    <li className="card card-hover flex flex-col gap-3 p-7">
       <div className="flex items-center justify-between">
         <div>
           <p className="text-sm font-medium text-text">{campaign.name}</p>
@@ -103,11 +103,7 @@ export function CampaignCard({ tenantId, campaign, isTenantAdmin }: { tenantId: 
       {isTenantAdmin && (
         <div className="flex flex-wrap items-center gap-2">
           {campaign.status === 'draft' && (
-            <button
-              onClick={() => controlMutation.mutate('start')}
-              disabled={controlMutation.isPending}
-              className="rounded-full bg-gradient-to-r from-violet to-cyan px-3 py-1.5 text-xs font-medium text-bg disabled:opacity-60"
-            >
+            <button onClick={() => controlMutation.mutate('start')} disabled={controlMutation.isPending} className="btn-primary px-3 py-1.5 text-xs">
               Iniciar disparo
             </button>
           )}
@@ -115,17 +111,13 @@ export function CampaignCard({ tenantId, campaign, isTenantAdmin }: { tenantId: 
             <button
               onClick={() => controlMutation.mutate('pause')}
               disabled={controlMutation.isPending}
-              className="rounded-full border border-border px-3 py-1.5 text-xs font-medium text-text-dim hover:border-violet hover:text-text disabled:opacity-60"
+              className="rounded-lg border border-border px-3 py-1.5 text-xs font-medium text-text-dim hover:border-violet hover:text-text disabled:opacity-60"
             >
               Pausar
             </button>
           )}
           {campaign.status === 'paused' && (
-            <button
-              onClick={() => controlMutation.mutate('resume')}
-              disabled={controlMutation.isPending}
-              className="rounded-full bg-gradient-to-r from-violet to-cyan px-3 py-1.5 text-xs font-medium text-bg disabled:opacity-60"
-            >
+            <button onClick={() => controlMutation.mutate('resume')} disabled={controlMutation.isPending} className="btn-primary px-3 py-1.5 text-xs">
               Retomar
             </button>
           )}
@@ -141,7 +133,7 @@ export function CampaignCard({ tenantId, campaign, isTenantAdmin }: { tenantId: 
                 <button
                   onClick={() => controlMutation.mutate('test')}
                   disabled={controlMutation.isPending || !testPhone.trim()}
-                  className="rounded-full border border-border px-3 py-1.5 text-xs font-medium text-text-dim hover:border-violet hover:text-text disabled:opacity-60"
+                  className="rounded-lg border border-border px-3 py-1.5 text-xs font-medium text-text-dim hover:border-violet hover:text-text disabled:opacity-60"
                 >
                   {controlMutation.isPending ? 'Enviando…' : 'Confirmar teste'}
                 </button>
@@ -149,7 +141,7 @@ export function CampaignCard({ tenantId, campaign, isTenantAdmin }: { tenantId: 
             ) : (
               <button
                 onClick={() => setShowTestInput(true)}
-                className="rounded-full border border-border px-3 py-1.5 text-xs font-medium text-text-dim hover:border-violet hover:text-text"
+                className="rounded-lg border border-border px-3 py-1.5 text-xs font-medium text-text-dim hover:border-violet hover:text-text"
               >
                 Enviar teste
               </button>

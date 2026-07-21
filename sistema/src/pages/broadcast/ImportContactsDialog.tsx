@@ -200,14 +200,14 @@ export function ImportContactsDialog({ tenantId, listId, onClose }: { tenantId: 
             <div className="flex gap-3">
               <button
                 onClick={() => setParsed(null)}
-                className="rounded-full border border-border px-4 py-2 text-sm font-medium text-text-dim hover:border-violet hover:text-text"
+                className="rounded-lg border border-border px-4 py-2 text-sm font-medium text-text-dim hover:border-violet hover:text-text"
               >
                 Trocar arquivo
               </button>
               <button
                 onClick={() => importMutation.mutate()}
                 disabled={importMutation.isPending || !nameColumn || !phoneColumn}
-                className="rounded-full bg-gradient-to-r from-violet to-cyan px-4 py-2 text-sm font-medium text-bg disabled:opacity-60"
+                className="btn-primary px-4 py-2 text-sm"
               >
                 {importMutation.isPending ? 'Importando…' : `Importar ${parsed.rows.length} contatos`}
               </button>
@@ -218,7 +218,7 @@ export function ImportContactsDialog({ tenantId, listId, onClose }: { tenantId: 
         {summary && (
           <div className="flex flex-col gap-3">
             <p className="text-sm text-text">
-              <span className="text-cyan">{summary.inserted}</span> contatos importados,{' '}
+              <span className="text-success">{summary.inserted}</span> contatos importados,{' '}
               <span className="text-text-dim">{summary.skippedDuplicates}</span> duplicados ignorados,{' '}
               <span className="text-magenta">{summary.invalidPhones.length}</span> rejeitados por telefone inválido.
             </p>
@@ -231,10 +231,7 @@ export function ImportContactsDialog({ tenantId, listId, onClose }: { tenantId: 
                 ))}
               </div>
             )}
-            <button
-              onClick={onClose}
-              className="self-start rounded-full bg-gradient-to-r from-violet to-cyan px-4 py-2 text-sm font-medium text-bg"
-            >
+            <button onClick={onClose} className="btn-primary self-start px-4 py-2 text-sm">
               Fechar
             </button>
           </div>

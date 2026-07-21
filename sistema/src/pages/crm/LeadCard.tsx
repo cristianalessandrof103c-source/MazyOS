@@ -31,7 +31,7 @@ export function LeadCard({
   const canRegisterSale = currentStage?.category === 'new' || currentStage?.category === 'in_progress'
 
   return (
-    <li className="rounded-xl border border-border bg-surface-2 p-3 shadow-sm">
+    <li className="card-hover rounded-xl border border-border bg-surface-2 p-3 shadow-sm">
       <p className="font-medium">{lead.full_name}</p>
       <p className="mt-0.5 text-xs text-text-faint">
         {lead.phone_number || lead.email || 'sem contato'} · {channel?.label ?? 'canal desconhecido'}
@@ -53,7 +53,7 @@ export function LeadCard({
         {canRegisterSale && (
           <button
             onClick={onRegisterSale}
-            className="whitespace-nowrap rounded-full border border-violet/40 px-2 py-1 text-xs text-violet hover:bg-violet/10"
+            className="whitespace-nowrap rounded-lg border border-violet/40 px-2 py-1 text-xs text-violet hover:bg-violet/10"
           >
             Registrar venda
           </button>

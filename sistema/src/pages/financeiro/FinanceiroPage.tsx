@@ -148,20 +148,20 @@ export function FinanceiroPage() {
       <header className="flex items-end justify-between">
         <div>
           <p className="eyebrow">Financeiro</p>
-          <h1 className="mt-2 font-display text-2xl font-semibold text-text">Visão financeira</h1>
+          <h1 className="mt-2 font-display text-4xl font-bold text-text">Visão financeira</h1>
         </div>
         <span className="hidden max-w-xs text-right text-xs text-text-faint md:block">
           Leads dos últimos {PERIODO_DIAS} dias · receita e CAC acumulados desde o início
         </span>
       </header>
 
-      {loading && <p className="mt-6 text-text-dim">Carregando…</p>}
+      {loading && <p className="mt-8 text-text-dim">Carregando…</p>}
 
       {!loading && (
         <>
-          <div className="mt-6 grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-5">
+          <div className="mt-8 grid grid-cols-2 gap-6 md:grid-cols-3 lg:grid-cols-5">
             <StatCard label={`Leads (${PERIODO_DIAS} dias)`} value={leads.length.toLocaleString('pt-BR')} icon={STAT_ICONS.leads} badgeColor="var(--color-violet)" />
-            <StatCard label="Receita fechada" value={formatarReais(receitaFechada)} icon={STAT_ICONS.revenue} badgeColor="var(--color-cyan)" />
+            <StatCard label="Receita fechada" value={formatarReais(receitaFechada)} icon={STAT_ICONS.revenue} badgeColor="var(--color-success)" />
             <StatCard label="Receita a receber" value={formatarReais(receitaAReceber)} icon={STAT_ICONS.pending} badgeColor="var(--color-cyan)" />
             <StatCard
               label={`Gasto de tráfego (${PERIODO_DIAS} dias)`}
@@ -179,24 +179,24 @@ export function FinanceiroPage() {
             />
           </div>
 
-          <div className="mt-6 grid gap-4 lg:grid-cols-2">
-            <section className="card p-5">
-              <h2 className="text-sm font-medium text-text-dim">Leads por canal ({PERIODO_DIAS} dias)</h2>
-              <div className="mt-3 overflow-hidden rounded-xl border border-border">
+          <div className="mt-8 grid gap-6 lg:grid-cols-2">
+            <section className="card p-7">
+              <h2 className="text-section font-semibold text-text">Leads por canal ({PERIODO_DIAS} dias)</h2>
+              <div className="mt-4 overflow-hidden rounded-xl border border-border/50">
                 <table className="w-full text-sm">
                   <thead>
-                    <tr className="border-b border-border bg-surface-2 text-left text-xs text-text-faint">
-                      <th className="px-3 py-2 font-medium">Canal</th>
-                      <th className="px-3 py-2 font-medium tabular-nums">Leads</th>
-                      <th className="px-3 py-2 font-medium tabular-nums">Receita</th>
+                    <tr className="border-b border-border/50 bg-surface-2 text-left text-xs text-text-faint">
+                      <th className="px-3 py-3 font-semibold">Canal</th>
+                      <th className="px-3 py-3 font-semibold tabular-nums">Leads</th>
+                      <th className="px-3 py-3 font-semibold tabular-nums">Receita</th>
                     </tr>
                   </thead>
                   <tbody>
                     {leadsPorCanal.map((row) => (
-                      <tr key={row.channel.id} className="border-b border-border last:border-0">
-                        <td className="px-3 py-2">{row.channel.label}</td>
-                        <td className="px-3 py-2 tabular-nums text-text-dim">{row.count}</td>
-                        <td className="px-3 py-2 tabular-nums text-text-dim">{formatarReais(row.receita)}</td>
+                      <tr key={row.channel.id} className="border-b border-border/50 transition-colors last:border-0 hover:bg-surface-2">
+                        <td className="px-3 py-3">{row.channel.label}</td>
+                        <td className="px-3 py-3 tabular-nums text-text-dim">{row.count}</td>
+                        <td className="px-3 py-3 tabular-nums text-text-dim">{formatarReais(row.receita)}</td>
                       </tr>
                     ))}
                     {leadsPorCanal.length === 0 && (
@@ -211,43 +211,43 @@ export function FinanceiroPage() {
               </div>
             </section>
 
-            <section className="card p-5">
+            <section className="card p-7">
               <div className="flex items-center justify-between gap-3">
-                <h2 className="text-sm font-medium text-text-dim">Gasto de tráfego por dia</h2>
+                <h2 className="text-section font-semibold text-text">Gasto de tráfego por dia</h2>
                 <button
                   onClick={() => {
                     setSyncOk(false)
                     syncMutation.mutate()
                   }}
                   disabled={syncMutation.isPending}
-                  className="rounded-full border border-border px-3 py-1 text-xs font-medium text-text-dim hover:border-violet hover:text-text disabled:opacity-60"
+                  className="rounded-lg border border-border px-3 py-1.5 text-xs font-medium text-text-dim hover:border-violet hover:text-text disabled:opacity-60"
                 >
                   {syncMutation.isPending ? 'Sincronizando…' : 'Sincronizar agora'}
                 </button>
               </div>
               {syncError && <p className="mt-2 text-xs text-magenta">{syncError}</p>}
               {syncOk && !syncMutation.isPending && (
-                <p className="mt-2 text-xs text-cyan">Sincronizado.</p>
+                <p className="mt-2 text-xs text-success">Sincronizado.</p>
               )}
-              <div className="mt-3 overflow-hidden rounded-xl border border-border">
+              <div className="mt-4 overflow-hidden rounded-xl border border-border/50">
                 <table className="w-full text-sm">
                   <thead>
-                    <tr className="border-b border-border bg-surface-2 text-left text-xs text-text-faint">
-                      <th className="px-3 py-2 font-medium">Dia</th>
-                      <th className="px-3 py-2 font-medium tabular-nums">Gasto</th>
-                      <th className="px-3 py-2 font-medium tabular-nums">Resultados</th>
-                      <th className="px-3 py-2 font-medium tabular-nums">CPA</th>
+                    <tr className="border-b border-border/50 bg-surface-2 text-left text-xs text-text-faint">
+                      <th className="px-3 py-3 font-semibold">Dia</th>
+                      <th className="px-3 py-3 font-semibold tabular-nums">Gasto</th>
+                      <th className="px-3 py-3 font-semibold tabular-nums">Resultados</th>
+                      <th className="px-3 py-3 font-semibold tabular-nums">CPA</th>
                     </tr>
                   </thead>
                   <tbody>
                     {adSpend.map((row) => (
-                      <tr key={row.date} className="border-b border-border last:border-0">
-                        <td className="px-3 py-2 tabular-nums">
+                      <tr key={row.date} className="border-b border-border/50 transition-colors last:border-0 hover:bg-surface-2">
+                        <td className="px-3 py-3 tabular-nums">
                           {new Date(row.date).toLocaleDateString('pt-BR')}
                         </td>
-                        <td className="px-3 py-2 tabular-nums text-text-dim">{formatarReais(row.spend_cents)}</td>
-                        <td className="px-3 py-2 tabular-nums text-text-dim">{row.results_count}</td>
-                        <td className="px-3 py-2 tabular-nums text-text-dim">
+                        <td className="px-3 py-3 tabular-nums text-text-dim">{formatarReais(row.spend_cents)}</td>
+                        <td className="px-3 py-3 tabular-nums text-text-dim">{row.results_count}</td>
+                        <td className="px-3 py-3 tabular-nums text-text-dim">
                           {row.cpa_cents === null ? '—' : formatarReais(row.cpa_cents)}
                         </td>
                       </tr>

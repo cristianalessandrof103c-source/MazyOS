@@ -37,7 +37,7 @@ export function ProspectRow({ tenantId, prospect }: { tenantId: string; prospect
   const isConverted = prospect.status === 'convertido'
 
   return (
-    <li className="rounded-xl border border-border bg-surface-2 p-3 shadow-sm">
+    <li className="card-hover rounded-xl border border-border bg-surface-2 p-3 shadow-sm">
       <div className="flex items-start justify-between gap-4">
         <div>
           <p className="font-medium">{prospect.name}</p>
@@ -71,7 +71,7 @@ export function ProspectRow({ tenantId, prospect }: { tenantId: string; prospect
 
         <div className="flex flex-shrink-0 flex-col items-end gap-2">
           {isConverted ? (
-            <span className="rounded-full bg-cyan/15 px-2 py-0.5 text-xs text-cyan">Convertido</span>
+            <span className="rounded-full bg-success/15 px-2 py-0.5 text-xs text-success">Convertido</span>
           ) : (
             <select
               value={prospect.status}
@@ -90,7 +90,7 @@ export function ProspectRow({ tenantId, prospect }: { tenantId: string; prospect
             <button
               onClick={() => convertMutation.mutate()}
               disabled={convertMutation.isPending}
-              className="whitespace-nowrap rounded-full border border-violet/40 px-2 py-1 text-xs text-violet hover:bg-violet/10 disabled:opacity-60"
+              className="whitespace-nowrap rounded-lg border border-violet/40 px-2 py-1 text-xs text-violet hover:bg-violet/10 disabled:opacity-60"
             >
               {convertMutation.isPending ? 'Convertendo…' : 'Converter em lead'}
             </button>
