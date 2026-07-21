@@ -28,6 +28,15 @@ export function Sparkline({ values, color }: { values: number[]; color: string }
   )
 }
 
+function TrendBadge({ value }: { value: number }) {
+  const positive = value >= 0
+  return (
+    <span className={`inline-flex items-center gap-0.5 text-xs font-medium ${positive ? 'text-success' : 'text-magenta'}`}>
+      {positive ? '▲' : '▼'} {Math.abs(value).toFixed(0)}%
+    </span>
+  )
+}
+
 export function StatCard({
   label,
   value,
@@ -35,6 +44,7 @@ export function StatCard({
   icon: IconComp,
   badgeColor,
   sparkline,
+  trend,
 }: {
   label: string
   value: string
@@ -42,18 +52,23 @@ export function StatCard({
   icon: (p: SVGProps<SVGSVGElement>) => ReactElement
   badgeColor: string
   sparkline?: number[]
+  /** Variação percentual vs. período anterior — só passar quando houver dado real pra calcular. */
+  trend?: number
 }) {
   return (
-    <div className="card flex flex-col p-5">
+    <div className="card card-hover flex flex-col p-7">
       <div className="flex items-start justify-between">
-        <p className="text-xs text-text-dim">{label}</p>
+        <p className="text-sm text-text-dim">{label}</p>
         <span className="icon-badge" style={{ backgroundColor: `color-mix(in srgb, ${badgeColor} 16%, transparent)`, color: badgeColor }}>
           <IconComp />
         </span>
       </div>
-      <p className="metric-number mt-4 text-2xl font-semibold text-text md:text-[1.7rem]">{value}</p>
+      <p className="metric-number mt-4 text-kpi font-bold text-text">{value}</p>
       <div className="mt-3 flex items-end justify-between gap-2">
-        <p className="text-xs text-text-faint">{hint ?? 'dado real'}</p>
+        <div className="flex items-center gap-2">
+          <p className="text-xs text-text-faint">{hint ?? 'dado real'}</p>
+          {trend !== undefined && <TrendBadge value={trend} />}
+        </div>
         {sparkline && sparkline.some((v) => v > 0) && <Sparkline values={sparkline} color={badgeColor} />}
       </div>
     </div>

@@ -48,11 +48,7 @@ export function NewCarrosselJobDialog({ tenantId, onClose }: { tenantId: string;
 
         {error && <p className="text-sm text-magenta">{error}</p>}
 
-        <button
-          type="submit"
-          disabled={mutation.isPending}
-          className="mt-2 rounded-full bg-gradient-to-r from-violet to-cyan px-4 py-2 font-medium text-bg disabled:opacity-60"
-        >
+        <button type="submit" disabled={mutation.isPending} className="btn-primary mt-2 px-4 py-2.5">
           {mutation.isPending ? 'Gerando texto…' : 'Gerar texto do carrossel'}
         </button>
       </form>

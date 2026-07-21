@@ -84,13 +84,13 @@ export function CerebroPage() {
       </header>
 
       <main className="px-6 py-8">
-        <h1 className="font-display text-xl font-semibold">Cérebro coletivo</h1>
-        <p className="mt-1 text-sm text-text-dim">
+        <h1 className="font-display text-4xl font-bold text-text">Cérebro coletivo</h1>
+        <p className="mt-2 text-sm text-text-dim">
           Insights extraídos de conversas encerradas, compartilhados entre todos os tenants. Só
           entram no agente depois de aprovados aqui.
         </p>
 
-        <div className="mt-6 flex gap-2 border-b border-border">
+        <div className="mt-8 flex gap-2 border-b border-border">
           {TABS.map((t) => (
             <button
               key={t.status}
@@ -106,11 +106,11 @@ export function CerebroPage() {
           ))}
         </div>
 
-        {insightsQuery.isLoading && <p className="mt-6 text-text-dim">Carregando…</p>}
+        {insightsQuery.isLoading && <p className="mt-8 text-text-dim">Carregando…</p>}
 
-        <ul className="mt-6 flex flex-col gap-3">
+        <ul className="mt-8 flex flex-col gap-4">
           {insights.map((insight) => (
-            <li key={insight.id} className="rounded-xl border border-border bg-surface p-4">
+            <li key={insight.id} className="card card-hover p-7">
               <div className="flex items-start justify-between gap-4">
                 <div>
                   <span className="rounded-full bg-violet/15 px-2 py-0.5 text-xs text-violet">
@@ -127,13 +127,13 @@ export function CerebroPage() {
                     <>
                       <button
                         onClick={() => reviewMutation.mutate({ id: insight.id, status: 'approved' })}
-                        className="rounded-full border border-violet/40 px-3 py-1 text-xs text-violet hover:bg-violet/10"
+                        className="rounded-lg border border-violet/40 px-3 py-1 text-xs text-violet hover:bg-violet/10"
                       >
                         Aprovar
                       </button>
                       <button
                         onClick={() => reviewMutation.mutate({ id: insight.id, status: 'archived' })}
-                        className="rounded-full border border-border px-3 py-1 text-xs text-text-dim hover:text-text"
+                        className="rounded-lg border border-border px-3 py-1 text-xs text-text-dim hover:text-text"
                       >
                         Arquivar
                       </button>
@@ -142,7 +142,7 @@ export function CerebroPage() {
                   {tab === 'approved' && (
                     <button
                       onClick={() => reviewMutation.mutate({ id: insight.id, status: 'archived' })}
-                      className="rounded-full border border-border px-3 py-1 text-xs text-text-dim hover:text-text"
+                      className="rounded-lg border border-border px-3 py-1 text-xs text-text-dim hover:text-text"
                     >
                       Arquivar
                     </button>

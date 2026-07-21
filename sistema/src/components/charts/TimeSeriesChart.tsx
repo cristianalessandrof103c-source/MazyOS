@@ -72,7 +72,7 @@ export function TimeSeriesChart({
         </div>
       )}
 
-      <svg ref={svgRef} viewBox={`0 0 ${WIDTH} ${height}`} className="w-full" style={{ height }}>
+      <svg ref={svgRef} viewBox={`0 0 ${WIDTH} ${height}`} className="chart-enter w-full" style={{ height }}>
         {gridFractions.map((f) => {
           const gy = PAD_TOP + plotHeight - f * plotHeight
           return (
@@ -84,6 +84,7 @@ export function TimeSeriesChart({
                 y2={gy}
                 stroke="var(--color-border)"
                 strokeWidth={1}
+                strokeOpacity={0.4}
               />
               <text x={PAD_LEFT - 8} y={gy + 3} textAnchor="end" fontSize={11} fill="var(--color-text-faint)">
                 {valueFormatter(f * yMax)}
@@ -113,7 +114,7 @@ export function TimeSeriesChart({
               pointCount - 1,
             )} ${y(0)} L ${x(0)} ${y(0)} Z`}
             fill={series[0].color}
-            fillOpacity={0.1}
+            fillOpacity={0.12}
             stroke="none"
           />
         )}
@@ -124,7 +125,7 @@ export function TimeSeriesChart({
             d={s.points.map((p, i) => `${i === 0 ? 'M' : 'L'} ${x(i)} ${y(p.y)}`).join(' ')}
             fill="none"
             stroke={s.color}
-            strokeWidth={2}
+            strokeWidth={3}
             strokeLinecap="round"
             strokeLinejoin="round"
           />

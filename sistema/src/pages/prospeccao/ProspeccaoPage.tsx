@@ -94,13 +94,13 @@ export function ProspeccaoPage() {
     <TenantSidebarLayout tenantId={tenantId}>
       <header>
         <p className="eyebrow">Prospecção</p>
-        <h1 className="mt-2 font-display text-2xl font-semibold text-text">Encontrar novos clientes</h1>
+        <h1 className="mt-2 font-display text-4xl font-bold text-text">Encontrar novos clientes</h1>
         <p className="mt-1 text-sm text-text-dim">
           Busque empresas por nicho e região (Google Maps) e qualifique manualmente antes de virar lead no CRM.
         </p>
       </header>
 
-      <form onSubmit={handleSearch} className="card mt-6 mb-6 flex flex-wrap items-end gap-3 p-4">
+      <form onSubmit={handleSearch} className="card mt-8 mb-6 flex flex-wrap items-end gap-3 p-7">
         <label className="flex flex-col gap-1.5 text-sm text-text-dim">
           Nicho
           <input
@@ -138,11 +138,7 @@ export function ProspeccaoPage() {
             </span>
           )}
         </label>
-        <button
-          type="submit"
-          disabled={searchMutation.isPending}
-          className="rounded-full bg-gradient-to-r from-violet to-cyan px-4 py-2 text-sm font-medium text-bg disabled:opacity-60"
-        >
+        <button type="submit" disabled={searchMutation.isPending} className="btn-primary px-4 py-2 text-sm">
           {searchMutation.isPending ? 'Buscando no Google Maps…' : 'Buscar'}
         </button>
         {searchMutation.isError && (

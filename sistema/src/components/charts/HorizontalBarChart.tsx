@@ -16,15 +16,15 @@ export function HorizontalBarChart({
   }
 
   return (
-    <div className="flex flex-col gap-2">
+    <div className="chart-enter flex flex-col gap-3">
       {data.map((d) => (
-        <div key={d.label} className="flex items-center gap-3 rounded-lg px-2 py-1 hover:bg-surface-2">
+        <div key={d.label} className="flex items-center gap-3 rounded-lg px-2 py-1.5 transition-colors hover:bg-surface-2">
           <span className="w-32 flex-shrink-0 truncate text-sm text-text-dim" title={d.label}>
             {d.label}
           </span>
-          <div className="h-5 flex-1 rounded-full bg-surface-2">
+          <div className="h-6 flex-1 rounded-full bg-surface-2">
             <div
-              className="h-5 rounded-full transition-all"
+              className="h-6 rounded-full transition-all duration-500"
               style={{ width: `${(d.value / max) * 100}%`, backgroundColor: color }}
             />
           </div>

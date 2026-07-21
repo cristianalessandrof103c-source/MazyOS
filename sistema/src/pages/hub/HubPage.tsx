@@ -33,7 +33,7 @@ const STATUS_STYLE: Record<IntegrationHubStatus, string> = {
   pending: 'bg-surface-2 text-text-dim',
   awaiting_approval: 'bg-violet/15 text-violet',
   processing: 'bg-surface-2 text-text-dim',
-  done: 'bg-cyan/15 text-cyan',
+  done: 'bg-success/15 text-success',
   failed: 'bg-magenta/15 text-magenta',
 }
 
@@ -100,7 +100,7 @@ function CarrosselDraftReview({ tenantId, job }: { tenantId: string; job: Integr
       <button
         onClick={() => approveMutation.mutate()}
         disabled={approveMutation.isPending}
-        className="self-start rounded-full bg-gradient-to-r from-violet to-cyan px-4 py-1.5 text-xs font-medium text-bg disabled:opacity-60"
+        className="btn-primary self-start px-4 py-1.5 text-xs"
       >
         {approveMutation.isPending ? 'Renderizando…' : 'Aprovar e renderizar'}
       </button>
@@ -163,29 +163,26 @@ export function HubPage() {
       <header className="flex items-end justify-between">
         <div>
           <p className="eyebrow">Hub de integrações</p>
-          <h1 className="mt-2 font-display text-2xl font-semibold text-text">Automação de conteúdo</h1>
+          <h1 className="mt-2 font-display text-4xl font-bold text-text">Automação de conteúdo</h1>
           <p className="mt-1 text-sm text-text-dim">
             Gera carrossel com IA e publica no Instagram sem sair do dashboard.
           </p>
         </div>
-        <button
-          onClick={() => setShowNewJob(true)}
-          className="rounded-full bg-gradient-to-r from-violet to-cyan px-4 py-2 text-sm font-medium text-bg"
-        >
+        <button onClick={() => setShowNewJob(true)} className="btn-primary px-4 py-2 text-sm">
           + Gerar carrossel
         </button>
       </header>
 
-      {jobsQuery.isLoading && <p className="mt-6 text-text-dim">Carregando…</p>}
+      {jobsQuery.isLoading && <p className="mt-8 text-text-dim">Carregando…</p>}
 
-      <ul className="mt-6 flex flex-col gap-3">
+      <ul className="mt-8 flex flex-col gap-4">
           {jobs.map((job) => {
             const isCarrosselDone = job.tool === 'carrossel' && job.status === 'done' && job.result && 'images' in job.result
             const isInstagramDone = job.tool === 'instagram_post' && job.status === 'done' && job.result && 'permalink' in job.result
             const isPublishing = publishMutation.isPending && publishMutation.variables === job.id
 
             return (
-              <li key={job.id} className="card p-4">
+              <li key={job.id} className="card card-hover p-7">
                 <div className="flex items-start justify-between gap-4">
                   <div className="min-w-0 flex-1">
                     <span className="rounded-full bg-violet/15 px-2 py-0.5 text-xs text-violet">
@@ -233,7 +230,7 @@ export function HubPage() {
                       <button
                         onClick={() => publishMutation.mutate(job.id)}
                         disabled={isPublishing}
-                        className="rounded-full bg-gradient-to-r from-violet to-cyan px-3 py-1.5 text-xs font-medium text-bg disabled:opacity-60"
+                        className="btn-primary px-3 py-1.5 text-xs"
                       >
                         {isPublishing ? 'Publicando…' : 'Publicar no Instagram'}
                       </button>
