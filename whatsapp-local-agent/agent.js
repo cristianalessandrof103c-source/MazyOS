@@ -8,7 +8,7 @@
 // listener de messages.upsert (mensagens recebidas -> push-inbound).
 
 import 'dotenv/config'
-import makeWASocket, { useMultiFileAuthState, DisconnectReason } from '@whiskeysockets/baileys'
+import makeWASocket, { useMultiFileAuthState, DisconnectReason, fetchLatestBaileysVersion } from '@whiskeysockets/baileys'
 import qrcodeTerminal from 'qrcode-terminal'
 
 const DEVICE_TOKEN = process.env.DEVICE_TOKEN
@@ -40,7 +40,13 @@ async function chamarDevice(action, payload = {}) {
 async function start() {
   const { state, saveCreds } = await useMultiFileAuthState('./auth_session')
 
+  // Busca a versão atual do protocolo do WhatsApp Web -- a lib tem uma versão "de fábrica"
+  // que fica desatualizada com o tempo (a Meta muda com frequência) e causa "Connection
+  // Failure" logo depois do handshake, antes até de gerar o QR.
+  const { version } = await fetchLatestBaileysVersion()
+
   const sock = makeWASocket({
+    version,
     auth: state,
     printQRInTerminal: false,
   })
