@@ -148,18 +148,18 @@ export function FinanceiroPage() {
       <header className="flex items-end justify-between">
         <div>
           <p className="eyebrow">Financeiro</p>
-          <h1 className="mt-2 font-display text-4xl font-bold text-text">Visão financeira</h1>
+          <h1 className="mt-2 font-display text-2xl font-bold text-text">Visão financeira</h1>
         </div>
         <span className="hidden max-w-xs text-right text-xs text-text-faint md:block">
           Leads dos últimos {PERIODO_DIAS} dias · receita e CAC acumulados desde o início
         </span>
       </header>
 
-      {loading && <p className="mt-8 text-text-dim">Carregando…</p>}
+      {loading && <p className="mt-6 text-text-dim">Carregando…</p>}
 
       {!loading && (
         <>
-          <div className="mt-8 grid grid-cols-2 gap-6 md:grid-cols-3 lg:grid-cols-5">
+          <div className="mt-6 grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-5">
             <StatCard label={`Leads (${PERIODO_DIAS} dias)`} value={leads.length.toLocaleString('pt-BR')} icon={STAT_ICONS.leads} badgeColor="var(--color-violet)" />
             <StatCard label="Receita fechada" value={formatarReais(receitaFechada)} icon={STAT_ICONS.revenue} badgeColor="var(--color-success)" />
             <StatCard label="Receita a receber" value={formatarReais(receitaAReceber)} icon={STAT_ICONS.pending} badgeColor="var(--color-cyan)" />
@@ -179,8 +179,8 @@ export function FinanceiroPage() {
             />
           </div>
 
-          <div className="mt-8 grid gap-6 lg:grid-cols-2">
-            <section className="card p-7">
+          <div className="mt-6 grid gap-4 lg:grid-cols-2">
+            <section className="card p-5">
               <h2 className="text-section font-semibold text-text">Leads por canal ({PERIODO_DIAS} dias)</h2>
               <div className="mt-4 overflow-hidden rounded-xl border border-border/50">
                 <table className="w-full text-sm">
@@ -211,7 +211,7 @@ export function FinanceiroPage() {
               </div>
             </section>
 
-            <section className="card p-7">
+            <section className="card p-5">
               <div className="flex items-center justify-between gap-3">
                 <h2 className="text-section font-semibold text-text">Gasto de tráfego por dia</h2>
                 <button

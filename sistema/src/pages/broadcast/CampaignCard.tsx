@@ -73,7 +73,7 @@ export function CampaignCard({ tenantId, campaign, isTenantAdmin }: { tenantId: 
   const progressPct = campaign.total_recipients > 0 ? Math.min(100, (totalDone / campaign.total_recipients) * 100) : 0
 
   return (
-    <li className="card card-hover flex flex-col gap-3 p-7">
+    <li className="card card-hover flex flex-col gap-3 p-5">
       <div className="flex items-center justify-between">
         <div>
           <p className="text-sm font-medium text-text">{campaign.name}</p>

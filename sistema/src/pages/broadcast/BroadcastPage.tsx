@@ -116,13 +116,13 @@ export function BroadcastPage() {
     <TenantSidebarLayout tenantId={tenantId}>
       <header>
         <p className="eyebrow">Disparos</p>
-        <h1 className="mt-2 font-display text-4xl font-bold text-text">Disparo em massa via WhatsApp</h1>
+        <h1 className="mt-2 font-display text-2xl font-bold text-text">Disparo em massa via WhatsApp</h1>
         <p className="mt-2 text-sm text-text-dim">
           Importe uma lista de contatos via CSV e dispare uma campanha usando um Template aprovado pela Meta.
         </p>
       </header>
 
-      <section className="mt-8">
+      <section className="mt-6">
         <h2 className="text-section font-semibold text-text">Listas de contatos</h2>
 
         {isTenantAdmin && (
@@ -172,7 +172,7 @@ export function BroadcastPage() {
         )}
 
         {activeListId && (
-          <div className="card mt-4 flex items-center justify-between p-7">
+          <div className="card mt-4 flex items-center justify-between p-5">
             <div>
               <p className="text-sm text-text">{lists.find((l) => l.id === activeListId)?.name}</p>
               <p className="text-xs text-text-faint">

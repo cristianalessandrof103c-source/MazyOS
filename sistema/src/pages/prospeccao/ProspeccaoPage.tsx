@@ -94,13 +94,13 @@ export function ProspeccaoPage() {
     <TenantSidebarLayout tenantId={tenantId}>
       <header>
         <p className="eyebrow">Prospecção</p>
-        <h1 className="mt-2 font-display text-4xl font-bold text-text">Encontrar novos clientes</h1>
+        <h1 className="mt-2 font-display text-2xl font-bold text-text">Encontrar novos clientes</h1>
         <p className="mt-1 text-sm text-text-dim">
           Busque empresas por nicho e região (Google Maps) e qualifique manualmente antes de virar lead no CRM.
         </p>
       </header>
 
-      <form onSubmit={handleSearch} className="card mt-8 mb-6 flex flex-wrap items-end gap-3 p-7">
+      <form onSubmit={handleSearch} className="card mt-6 mb-6 flex flex-wrap items-end gap-3 p-5">
         <label className="flex flex-col gap-1.5 text-sm text-text-dim">
           Nicho
           <input

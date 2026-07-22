@@ -81,7 +81,7 @@ export function TenantSidebarLayout({ tenantId, children }: { tenantId: string; 
           <button onClick={() => signOut()} className="block whitespace-nowrap rounded-lg px-3 py-2 text-left text-sm text-sidebar-fg-dim hover:bg-sidebar-surface hover:text-sidebar-fg">Sair</button>
         </div>
       </aside>
-      <main className="app-main flex-1 overflow-y-auto px-6 py-8 md:px-10 md:py-10">{children}</main>
+      <main className="app-main flex-1 overflow-y-auto px-5 py-6 md:px-8 md:py-8">{children}</main>
     </div>
   )
 }

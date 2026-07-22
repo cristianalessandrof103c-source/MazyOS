@@ -71,7 +71,7 @@ export function CrmPage() {
       <header className="flex items-end justify-between">
         <div>
           <p className="eyebrow">CRM</p>
-          <h1 className="mt-2 font-display text-4xl font-bold text-text">Pipeline de leads</h1>
+          <h1 className="mt-2 font-display text-2xl font-bold text-text">Pipeline de leads</h1>
         </div>
         {newStage && (
           <button onClick={() => setShowNewLead(true)} className="btn-primary px-4 py-2 text-sm">
@@ -80,10 +80,10 @@ export function CrmPage() {
         )}
       </header>
 
-      {loading && <p className="mt-8 text-text-dim">Carregando…</p>}
+      {loading && <p className="mt-6 text-text-dim">Carregando…</p>}
 
       {!loading && (
-        <div className="mt-8 flex gap-6 overflow-x-auto pb-4">
+        <div className="mt-6 flex gap-4 overflow-x-auto pb-4">
           {stages.map((stage) => {
             const stageLeads = leads.filter((l) => l.stage_id === stage.id)
             return (

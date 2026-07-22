@@ -56,15 +56,15 @@ export function StatCard({
   trend?: number
 }) {
   return (
-    <div className="card card-hover flex flex-col p-7">
+    <div className="card card-hover flex flex-col p-5">
       <div className="flex items-start justify-between">
         <p className="text-sm text-text-dim">{label}</p>
         <span className="icon-badge" style={{ backgroundColor: `color-mix(in srgb, ${badgeColor} 16%, transparent)`, color: badgeColor }}>
           <IconComp />
         </span>
       </div>
-      <p className="metric-number mt-4 text-kpi font-bold text-text">{value}</p>
-      <div className="mt-3 flex items-end justify-between gap-2">
+      <p className="metric-number mt-3 text-kpi font-bold text-text">{value}</p>
+      <div className="mt-2 flex items-end justify-between gap-2">
         <div className="flex items-center gap-2">
           <p className="text-xs text-text-faint">{hint ?? 'dado real'}</p>
           {trend !== undefined && <TrendBadge value={trend} />}

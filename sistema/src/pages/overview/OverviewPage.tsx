@@ -143,7 +143,7 @@ export function OverviewPage() {
       <header className="flex flex-wrap items-end justify-between gap-4">
         <div>
           <p className="eyebrow">Painel Operacional</p>
-          <h1 className="mt-2 font-display text-4xl font-bold text-text">Bem-vindo de volta</h1>
+          <h1 className="mt-2 font-display text-2xl font-bold text-text">Bem-vindo de volta</h1>
         </div>
         <div className="flex flex-col items-end gap-2">
           <span className="text-xs text-text-faint">Atualizado agora</span>
@@ -163,11 +163,11 @@ export function OverviewPage() {
         </div>
       </header>
 
-      {loading && <p className="mt-8 text-text-dim">Carregando…</p>}
+      {loading && <p className="mt-6 text-text-dim">Carregando…</p>}
 
       {!loading && (
         <>
-          <div className="mt-8 grid grid-cols-2 gap-6 lg:grid-cols-5">
+          <div className="mt-6 grid grid-cols-2 gap-4 lg:grid-cols-5">
             <StatCard
               label="Gasto de tráfego"
               value={formatarReais(gastoTotal)}
@@ -208,8 +208,8 @@ export function OverviewPage() {
             />
           </div>
 
-          <div className="mt-8 grid gap-6 lg:grid-cols-2">
-            <section className="card p-7">
+          <div className="mt-6 grid gap-4 lg:grid-cols-2">
+            <section className="card p-5">
               <h2 className="text-section font-semibold text-text">Leads por dia</h2>
               <div className="mt-4">
                 <TimeSeriesChart
@@ -219,7 +219,7 @@ export function OverviewPage() {
               </div>
             </section>
 
-            <section className="card p-7">
+            <section className="card p-5">
               <h2 className="text-section font-semibold text-text">Receita × gasto de tráfego</h2>
               <div className="mt-4">
                 <TimeSeriesChart
@@ -233,7 +233,7 @@ export function OverviewPage() {
             </section>
           </div>
 
-          <section className="card mt-6 p-7">
+          <section className="card mt-6 p-5">
             <h2 className="text-section font-semibold text-text">Leads por canal ({periodDays} dias)</h2>
             <div className="mt-4">
               <HorizontalBarChart data={leadsPorCanal} color={CHART_VIOLET} />

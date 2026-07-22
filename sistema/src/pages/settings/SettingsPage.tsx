@@ -6,6 +6,7 @@ import { useAuth } from '../../contexts/AuthContext'
 import { useCompanyBranding } from '../../hooks/useCompanyBranding'
 import { TenantSidebarLayout } from '../../components/TenantSidebarLayout'
 import { InviteMemberDialog } from './InviteMemberDialog'
+import { extrairErroFuncao } from '../../lib/functions-error'
 import { ROLE_LABEL } from '../../lib/membership-roles'
 import type { Membership, Profile } from '../../lib/crm-types'
 
@@ -90,6 +91,23 @@ export function SettingsPage() {
     onError: (err: Error) => setBrandingError(err.message),
   })
 
+  const [memberActionError, setMemberActionError] = useState<string | null>(null)
+
+  const memberActionMutation = useMutation({
+    mutationFn: async ({ membershipId, action }: { membershipId: string; action: 'disable' | 'reactivate' }) => {
+      const { data, error } = await supabase.functions.invoke('manage-member', {
+        body: { tenant_id: tenantId, membership_id: membershipId, action },
+      })
+      if (error) throw new Error(await extrairErroFuncao(error))
+      if (!data?.ok) throw new Error(data?.error ?? 'Falha ao atualizar membro')
+    },
+    onSuccess: () => {
+      setMemberActionError(null)
+      queryClient.invalidateQueries({ queryKey: ['team-memberships', tenantId] })
+    },
+    onError: (err: Error) => setMemberActionError(err.message),
+  })
+
   useEffect(() => {
     if (brandingQuery.data && !brandingInitialized) {
       setPrimaryColor(brandingQuery.data.branding_json.primary_color ?? '#8b5cf6')
@@ -108,10 +126,10 @@ export function SettingsPage() {
       <div className="mx-auto max-w-3xl">
         <header>
           <p className="eyebrow">Configurações</p>
-          <h1 className="mt-2 font-display text-4xl font-bold text-text">Equipe e marca</h1>
+          <h1 className="mt-2 font-display text-2xl font-bold text-text">Equipe e marca</h1>
         </header>
 
-        <section className="mt-8">
+        <section className="mt-6">
           <div className="mb-4 flex items-center justify-between">
             <h2 className="text-section font-semibold text-text">Equipe</h2>
             {isTenantAdmin && (
@@ -122,6 +140,8 @@ export function SettingsPage() {
           </div>
 
           {membershipsQuery.isLoading && <p className="text-text-dim">Carregando…</p>}
+
+          {memberActionError && <p className="mb-3 text-sm text-magenta">{memberActionError}</p>}
 
           <ul className="flex flex-col gap-3">
             {(membershipsQuery.data ?? []).map((m) => (
@@ -135,9 +155,33 @@ export function SettingsPage() {
                   </p>
                   <p className="text-xs text-text-faint">{ROLE_LABEL[m.role]}</p>
                 </div>
-                <span className={`rounded-full px-2 py-0.5 text-xs ${STATUS_STYLE[m.status]}`}>
-                  {STATUS_LABEL[m.status]}
-                </span>
+                <div className="flex items-center gap-3">
+                  <span className={`rounded-full px-2 py-0.5 text-xs ${STATUS_STYLE[m.status]}`}>
+                    {STATUS_LABEL[m.status]}
+                  </span>
+                  {isTenantAdmin && m.user_id !== user?.id && m.status !== 'disabled' && (
+                    <button
+                      onClick={() => {
+                        if (confirm('Remover o acesso desse membro ao sistema?')) {
+                          memberActionMutation.mutate({ membershipId: m.id, action: 'disable' })
+                        }
+                      }}
+                      disabled={memberActionMutation.isPending}
+                      className="text-xs text-text-faint hover:text-magenta"
+                    >
+                      Remover
+                    </button>
+                  )}
+                  {isTenantAdmin && m.status === 'disabled' && (
+                    <button
+                      onClick={() => memberActionMutation.mutate({ membershipId: m.id, action: 'reactivate' })}
+                      disabled={memberActionMutation.isPending}
+                      className="text-xs text-text-faint hover:text-success"
+                    >
+                      Reativar
+                    </button>
+                  )}
+                </div>
               </li>
             ))}
             {!membershipsQuery.isLoading && (membershipsQuery.data ?? []).length === 0 && (
@@ -158,7 +202,7 @@ export function SettingsPage() {
                 e.preventDefault()
                 brandingMutation.mutate()
               }}
-              className="card mt-4 flex max-w-sm flex-col gap-4 p-7"
+              className="card mt-4 flex max-w-sm flex-col gap-4 p-5"
             >
               <label className="flex flex-col gap-1.5 text-sm text-text-dim">
                 Cor primária
