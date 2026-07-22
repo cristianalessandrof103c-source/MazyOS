@@ -41,15 +41,29 @@ export type BroadcastRecipientCounts = Record<BroadcastRecipientStatus, number>
 
 // whatsapp_connections (0004_whatsapp_agent.sql) não tinha tipo no frontend porque não
 // tinha UI nenhuma até agora — precisamos dele só pra popular o dropdown de conexão na
-// criação de campanha.
+// criação de campanha. Fase 10a acrescenta o tipo qr_web (WhatsApp Web via QR Code,
+// coexistindo com a Cloud API oficial) — ver 0016_whatsapp_web_qr.sql.
+export type WhatsAppConnectionType = 'cloud_api' | 'qr_web'
+export type WhatsAppWebStatus = 'disconnected' | 'qr_pending' | 'connected'
+
 export type WhatsAppConnection = {
   id: string
   tenant_id: string
-  phone_number_id: string
-  business_account_id: string
+  connection_type: WhatsAppConnectionType
+  phone_number_id: string | null
+  business_account_id: string | null
   status: 'test' | 'live'
   daily_send_cap: number
+  web_status: WhatsAppWebStatus
+  qr_pairing_code: string | null
+  qr_updated_at: string | null
+  connected_phone_number: string | null
+  last_seen_at: string | null
   created_at: string
+  // Hash SHA-256 do token — o token em si (texto puro) nunca é gravado, só devolvido uma vez
+  // na resposta de whatsapp-web-connection?action=create. O hash aqui só serve pro dashboard
+  // saber "existe um token válido pra essa conexão" (não nulo) sem expor nada sensível.
+  web_device_token_hash: string | null
 }
 
 // Vem direto da Graph API (whatsapp-templates, action "list") — não é uma tabela nossa,

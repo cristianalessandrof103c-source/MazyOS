@@ -1,0 +1,8 @@
+node_modules/
+.env
+
+# Credenciais da sessão do WhatsApp Web geradas pelo Baileys -- é literalmente a chave da
+# conta pareada. Nunca pode ir pro git.
+auth_session/
+
+*.log

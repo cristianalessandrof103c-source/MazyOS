@@ -8,8 +8,23 @@ import { ImportContactsDialog } from './ImportContactsDialog'
 import { NewCampaignDialog } from './NewCampaignDialog'
 import { CampaignCard } from './CampaignCard'
 import { TemplatesSection } from './TemplatesSection'
+import { WhatsAppWebSection } from './WhatsAppWebSection'
 import type { BroadcastCampaign, BroadcastList } from '../../lib/broadcast-types'
 import type { Membership } from '../../lib/crm-types'
+
+// Leads/Conversas/Scripts são placeholder nesta etapa (Fase 10a só entrega a conexão QR) —
+// já aparecem na navegação pra deixar claro o que vem a seguir, ver Fase 10b/10c no plano.
+type BroadcastTab = 'whatsapp' | 'campanhas' | 'leads' | 'conversas' | 'scripts'
+
+const BROADCAST_TABS: BroadcastTab[] = ['whatsapp', 'campanhas', 'leads', 'conversas', 'scripts']
+
+const TAB_LABEL: Record<BroadcastTab, string> = {
+  whatsapp: 'WhatsApp',
+  campanhas: 'Campanhas',
+  leads: 'Leads',
+  conversas: 'Conversas',
+  scripts: 'Scripts',
+}
 
 export function BroadcastPage() {
   const { tenantId } = useParams<{ tenantId: string }>()
@@ -20,7 +35,7 @@ export function BroadcastPage() {
   const [showImport, setShowImport] = useState(false)
   const [showNewCampaign, setShowNewCampaign] = useState(false)
   const [listError, setListError] = useState<string | null>(null)
-  const [activeTab, setActiveTab] = useState<'templates' | 'campanhas'>('templates')
+  const [activeTab, setActiveTab] = useState<BroadcastTab>('whatsapp')
 
   const myMembershipQuery = useQuery({
     queryKey: ['my-membership', tenantId, user?.id],
@@ -118,14 +133,15 @@ export function BroadcastPage() {
     <TenantSidebarLayout tenantId={tenantId}>
       <header>
         <p className="eyebrow">Disparos</p>
-        <h1 className="mt-2 font-display text-2xl font-bold text-text">Disparo em massa via WhatsApp</h1>
+        <h1 className="mt-2 font-display text-2xl font-bold text-text">Disparos via WhatsApp</h1>
         <p className="mt-2 text-sm text-text-dim">
-          Importe uma lista de contatos via CSV e dispare uma campanha usando um Template aprovado pela Meta.
+          Conecte um número via QR Code pra conversar e disparar direto pelos seus leads, ou dispare em
+          massa via Template aprovado pela Meta.
         </p>
       </header>
 
-      <div className="mt-6 flex items-center gap-1 rounded-xl border border-border bg-surface p-1 w-fit">
-        {(['templates', 'campanhas'] as const).map((tab) => (
+      <div className="mt-6 flex flex-wrap items-center gap-1 rounded-xl border border-border bg-surface p-1 w-fit">
+        {BROADCAST_TABS.map((tab) => (
           <button
             key={tab}
             onClick={() => setActiveTab(tab)}
@@ -133,15 +149,24 @@ export function BroadcastPage() {
               activeTab === tab ? 'bg-violet text-white' : 'text-text-dim hover:text-text'
             }`}
           >
-            {tab === 'templates' ? 'Templates' : 'Listas & Campanhas'}
+            {TAB_LABEL[tab]}
           </button>
         ))}
       </div>
 
-      {activeTab === 'templates' && <TemplatesSection tenantId={tenantId} isTenantAdmin={isTenantAdmin} />}
+      {activeTab === 'whatsapp' && <WhatsAppWebSection tenantId={tenantId} isTenantAdmin={isTenantAdmin} />}
+
+      {(activeTab === 'leads' || activeTab === 'conversas' || activeTab === 'scripts') && (
+        <p className="mt-6 max-w-xl rounded-xl border border-dashed border-border p-4 text-sm text-text-faint">
+          {TAB_LABEL[activeTab]} chega na próxima etapa desta feature (lista unificada de leads,
+          conversas e respostas rápidas) — por enquanto, conecte o WhatsApp na aba "WhatsApp" acima.
+        </p>
+      )}
 
       {activeTab === 'campanhas' && (
       <>
+      <TemplatesSection tenantId={tenantId} isTenantAdmin={isTenantAdmin} />
+
       <section className="mt-6">
         <h2 className="text-section font-semibold text-text">Listas de contatos</h2>
 
