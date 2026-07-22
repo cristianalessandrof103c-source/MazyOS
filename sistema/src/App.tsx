@@ -7,6 +7,7 @@ import { OverviewPage } from './pages/overview/OverviewPage'
 import { CrmPage } from './pages/crm/CrmPage'
 import { ProspeccaoPage } from './pages/prospeccao/ProspeccaoPage'
 import { BroadcastPage } from './pages/broadcast/BroadcastPage'
+import { AgentePage } from './pages/agente/AgentePage'
 import { FinanceiroPage } from './pages/financeiro/FinanceiroPage'
 import { CerebroPage } from './pages/cerebro/CerebroPage'
 import { HubPage } from './pages/hub/HubPage'
@@ -61,6 +62,14 @@ function App() {
         element={
           <ProtectedRoute>
             <BroadcastPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/agente/:tenantId"
+        element={
+          <ProtectedRoute>
+            <AgentePage />
           </ProtectedRoute>
         }
       />

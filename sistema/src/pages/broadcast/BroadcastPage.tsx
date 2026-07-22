@@ -7,6 +7,7 @@ import { TenantSidebarLayout } from '../../components/TenantSidebarLayout'
 import { ImportContactsDialog } from './ImportContactsDialog'
 import { NewCampaignDialog } from './NewCampaignDialog'
 import { CampaignCard } from './CampaignCard'
+import { TemplatesSection } from './TemplatesSection'
 import type { BroadcastCampaign, BroadcastList } from '../../lib/broadcast-types'
 import type { Membership } from '../../lib/crm-types'
 
@@ -19,6 +20,7 @@ export function BroadcastPage() {
   const [showImport, setShowImport] = useState(false)
   const [showNewCampaign, setShowNewCampaign] = useState(false)
   const [listError, setListError] = useState<string | null>(null)
+  const [activeTab, setActiveTab] = useState<'templates' | 'campanhas'>('templates')
 
   const myMembershipQuery = useQuery({
     queryKey: ['my-membership', tenantId, user?.id],
@@ -122,6 +124,24 @@ export function BroadcastPage() {
         </p>
       </header>
 
+      <div className="mt-6 flex items-center gap-1 rounded-xl border border-border bg-surface p-1 w-fit">
+        {(['templates', 'campanhas'] as const).map((tab) => (
+          <button
+            key={tab}
+            onClick={() => setActiveTab(tab)}
+            className={`rounded-lg px-4 py-1.5 text-sm font-medium transition-colors ${
+              activeTab === tab ? 'bg-violet text-white' : 'text-text-dim hover:text-text'
+            }`}
+          >
+            {tab === 'templates' ? 'Templates' : 'Listas & Campanhas'}
+          </button>
+        ))}
+      </div>
+
+      {activeTab === 'templates' && <TemplatesSection tenantId={tenantId} isTenantAdmin={isTenantAdmin} />}
+
+      {activeTab === 'campanhas' && (
+      <>
       <section className="mt-6">
         <h2 className="text-section font-semibold text-text">Listas de contatos</h2>
 
@@ -215,6 +235,8 @@ export function BroadcastPage() {
           ))}
         </ul>
       </section>
+      </>
+      )}
 
       {showImport && activeListId && (
         <ImportContactsDialog tenantId={tenantId} listId={activeListId} onClose={() => setShowImport(false)} />

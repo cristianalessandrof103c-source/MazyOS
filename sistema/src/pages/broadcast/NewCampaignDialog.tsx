@@ -1,12 +1,19 @@
-import { useState, type FormEvent } from 'react'
+import { useMemo, useState, type FormEvent } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '../../lib/supabase'
 import { Modal } from '../../components/Modal'
-import type { BroadcastList, WhatsAppConnection } from '../../lib/broadcast-types'
+import { extrairErroFuncao } from '../../lib/functions-error'
+import type { BroadcastList, WhatsAppConnection, WhatsAppTemplate } from '../../lib/broadcast-types'
 
 const CONNECTION_STATUS_LABEL: Record<WhatsAppConnection['status'], string> = {
   live: 'produção (live)',
   test: 'sandbox (test)',
+}
+
+function countVariables(template: WhatsAppTemplate | undefined): number {
+  const body = template?.components.find((c) => c.type === 'BODY')
+  if (!body?.text) return 0
+  return new Set(Array.from(body.text.matchAll(/\{\{(\d+)\}\}/g)).map((m) => m[1])).size
 }
 
 export function NewCampaignDialog({ tenantId, lists, onClose }: { tenantId: string; lists: BroadcastList[]; onClose: () => void }) {
@@ -15,7 +22,6 @@ export function NewCampaignDialog({ tenantId, lists, onClose }: { tenantId: stri
   const [listId, setListId] = useState(lists[0]?.id ?? '')
   const [connectionId, setConnectionId] = useState('')
   const [templateName, setTemplateName] = useState('')
-  const [templateLanguage, setTemplateLanguage] = useState('pt_BR')
   const [variableMapping, setVariableMapping] = useState<string[]>([])
   const [error, setError] = useState<string | null>(null)
 
@@ -33,6 +39,23 @@ export function NewCampaignDialog({ tenantId, lists, onClose }: { tenantId: stri
     enabled: Boolean(tenantId),
   })
 
+  const templatesQuery = useQuery({
+    queryKey: ['whatsapp-templates', tenantId],
+    queryFn: async () => {
+      const { data, error } = await supabase.functions.invoke('whatsapp-templates', {
+        body: { tenant_id: tenantId, action: 'list' },
+      })
+      if (error) throw new Error(await extrairErroFuncao(error))
+      if (!data?.ok) throw new Error(data?.error ?? 'Falha ao listar templates')
+      return data.templates as WhatsAppTemplate[]
+    },
+    enabled: Boolean(tenantId),
+  })
+
+  const approvedTemplates = (templatesQuery.data ?? []).filter((t) => t.status === 'APPROVED')
+  const selectedTemplate = approvedTemplates.find((t) => t.name === templateName)
+  const requiredVariables = countVariables(selectedTemplate)
+
   const selectedList = lists.find((l) => l.id === listId)
   const variableOptions = ['full_name', ...(selectedList?.extra_field_keys ?? [])]
 
@@ -44,7 +67,7 @@ export function NewCampaignDialog({ tenantId, lists, onClose }: { tenantId: stri
         whatsapp_connection_id: connectionId,
         name: name.trim(),
         template_name: templateName.trim(),
-        template_language: templateLanguage.trim() || 'pt_BR',
+        template_language: selectedTemplate?.language ?? 'pt_BR',
         variable_mapping: variableMapping,
       })
       if (error) throw error
@@ -58,13 +81,19 @@ export function NewCampaignDialog({ tenantId, lists, onClose }: { tenantId: stri
 
   function handleSubmit(e: FormEvent) {
     e.preventDefault()
-    if (!listId || !connectionId) return
+    if (!listId || !connectionId || !templateName) return
+    if (variableMapping.length !== requiredVariables) {
+      setError(`O template "${templateName}" usa ${requiredVariables} variável(is) — marque exatamente essa quantidade abaixo.`)
+      return
+    }
     mutation.mutate()
   }
 
   function toggleVariable(key: string) {
     setVariableMapping((prev) => (prev.includes(key) ? prev.filter((k) => k !== key) : [...prev, key]))
   }
+
+  const body = useMemo(() => selectedTemplate?.components.find((c) => c.type === 'BODY')?.text, [selectedTemplate])
 
   return (
     <Modal title="Nova campanha" onClose={onClose}>
@@ -117,55 +146,61 @@ export function NewCampaignDialog({ tenantId, lists, onClose }: { tenantId: stri
           </select>
         </label>
 
-        <div className="flex gap-3">
-          <label className="flex flex-1 flex-col gap-1.5 text-sm text-text-dim">
-            Nome do Template (Meta)
-            <input
-              required
-              value={templateName}
-              onChange={(e) => setTemplateName(e.target.value)}
-              placeholder="promocao_julho"
-              className="rounded-lg border border-border bg-surface-2 px-3 py-2 text-text outline-none focus:border-violet"
-            />
-          </label>
-          <label className="flex w-28 flex-col gap-1.5 text-sm text-text-dim">
-            Idioma
-            <input
-              value={templateLanguage}
-              onChange={(e) => setTemplateLanguage(e.target.value)}
-              className="rounded-lg border border-border bg-surface-2 px-3 py-2 text-text outline-none focus:border-violet"
-            />
-          </label>
-        </div>
-
-        <div className="flex flex-col gap-1.5 text-sm text-text-dim">
-          Variáveis do Template (na ordem {'{{1}}, {{2}}...'})
-          <div className="flex flex-wrap gap-2">
-            {variableOptions.map((key) => {
-              const order = variableMapping.indexOf(key)
-              return (
-                <button
-                  key={key}
-                  type="button"
-                  onClick={() => toggleVariable(key)}
-                  className={`rounded-full border px-3 py-1 text-xs ${
-                    order >= 0 ? 'border-violet bg-violet/15 text-violet' : 'border-border text-text-dim hover:border-violet'
-                  }`}
-                >
-                  {key === 'full_name' ? 'nome' : key}
-                  {order >= 0 && ` {{${order + 1}}}`}
-                </button>
-              )
-            })}
-          </div>
-          {variableOptions.length === 1 && (
-            <p className="text-xs text-text-faint">Essa lista só tem a coluna de nome — importe um CSV com colunas extras pra ter mais variáveis.</p>
+        <label className="flex flex-col gap-1.5 text-sm text-text-dim">
+          Template (Meta, aprovado)
+          <select
+            required
+            value={templateName}
+            onChange={(e) => {
+              setTemplateName(e.target.value)
+              setVariableMapping([])
+            }}
+            className="rounded-lg border border-border bg-surface-2 px-3 py-2 text-text outline-none focus:border-violet"
+          >
+            <option value="">Selecione…</option>
+            {approvedTemplates.map((t) => (
+              <option key={t.id} value={t.name}>
+                {t.name} ({t.language})
+              </option>
+            ))}
+          </select>
+          {templatesQuery.isSuccess && approvedTemplates.length === 0 && (
+            <span className="text-xs text-text-faint">Nenhum template aprovado ainda — crie um na aba Templates e aguarde a Meta aprovar.</span>
           )}
-        </div>
+        </label>
+
+        {body && <p className="rounded-lg border border-border bg-surface-2 p-3 text-xs text-text-dim">{body}</p>}
+
+        {selectedTemplate && (
+          <div className="flex flex-col gap-1.5 text-sm text-text-dim">
+            Variáveis do template (na ordem {'{{1}}, {{2}}...'}) — precisa marcar {requiredVariables}
+            <div className="flex flex-wrap gap-2">
+              {variableOptions.map((key) => {
+                const order = variableMapping.indexOf(key)
+                return (
+                  <button
+                    key={key}
+                    type="button"
+                    onClick={() => toggleVariable(key)}
+                    className={`rounded-full border px-3 py-1 text-xs ${
+                      order >= 0 ? 'border-violet bg-violet/15 text-violet' : 'border-border text-text-dim hover:border-violet'
+                    }`}
+                  >
+                    {key === 'full_name' ? 'nome' : key}
+                    {order >= 0 && ` {{${order + 1}}}`}
+                  </button>
+                )
+              })}
+            </div>
+            {variableOptions.length === 1 && requiredVariables > 1 && (
+              <p className="text-xs text-text-faint">Essa lista só tem a coluna de nome — importe um CSV com colunas extras pra ter mais variáveis.</p>
+            )}
+          </div>
+        )}
 
         {error && <p className="text-sm text-magenta">{error}</p>}
 
-        <button type="submit" disabled={mutation.isPending || !listId || !connectionId} className="btn-primary mt-2 px-4 py-2.5">
+        <button type="submit" disabled={mutation.isPending || !listId || !connectionId || !templateName} className="btn-primary mt-2 px-4 py-2.5">
           {mutation.isPending ? 'Criando…' : 'Criar campanha (rascunho)'}
         </button>
       </form>
