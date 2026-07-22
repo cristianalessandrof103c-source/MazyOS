@@ -1,0 +1,15 @@
+{
+  "name": "whatsapp-local-agent",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "description": "Agente local (Fase 10a) que segura a sessão do WhatsApp Web (QR Code, não-oficial via Baileys) e conversa com o Supabase do sistema/ — roda no PC do usuário, não faz parte do build do Vite nem é deployado em servidor.",
+  "scripts": {
+    "start": "node agent.js"
+  },
+  "dependencies": {
+    "@whiskeysockets/baileys": "^6.7.23",
+    "dotenv": "^16.4.5",
+    "qrcode-terminal": "^0.12.0"
+  }
+}

@@ -28,7 +28,11 @@ export function NewCampaignDialog({ tenantId, lists, onClose }: { tenantId: stri
   const connectionsQuery = useQuery({
     queryKey: ['whatsapp-connections', tenantId],
     queryFn: async () => {
-      const { data, error } = await supabase.from('whatsapp_connections').select('*').eq('tenant_id', tenantId)
+      const { data, error } = await supabase
+        .from('whatsapp_connections')
+        .select('*')
+        .eq('tenant_id', tenantId)
+        .eq('connection_type', 'cloud_api')
       if (error) throw error
       const connections = data as WhatsAppConnection[]
       if (!connectionId && connections.length > 0) {
