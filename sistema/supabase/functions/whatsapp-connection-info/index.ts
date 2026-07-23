@@ -62,10 +62,13 @@ Deno.serve(async (req: Request) => {
     if (!callerMembership) return jsonResponse({ error: 'Você não é membro desse tenant.' }, 403)
   }
 
+  // Fase 10a: whatsapp_connections também guarda conexões qr_web agora — sem esse filtro,
+  // um tenant com as duas conexões faz o maybeSingle() estourar erro (mais de uma linha).
   const { data: connection, error: connectionError } = await supabaseAdmin
     .from('whatsapp_connections')
     .select('*')
     .eq('tenant_id', tenantId)
+    .eq('connection_type', 'cloud_api')
     .maybeSingle()
 
   if (connectionError || !connection) return jsonResponse({ ok: true, connection: null })

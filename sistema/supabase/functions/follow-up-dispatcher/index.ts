@@ -53,6 +53,9 @@ async function processJob(job: any) {
     .from('whatsapp_connections')
     .select('phone_number_id, status')
     .eq('tenant_id', job.tenant_id)
+    // Fase 10a: exclui conexões qr_web (phone_number_id sempre null nelas) — esse follow-up
+    // é especificamente da Cloud API, não teria como mandar por WhatsApp Web mesmo.
+    .eq('connection_type', 'cloud_api')
   // Se o tenant tiver as duas conexões (test + live, durante o corte da Fase 6),
   // prioriza a live — é a que de fato conversa com leads reais.
   const connection = connections?.find((c) => c.status === 'live') ?? connections?.[0]

@@ -96,13 +96,17 @@ Deno.serve(async (req: Request) => {
     }
   }
 
+  // Fase 10a: whatsapp_connections agora também guarda conexões qr_web (WhatsApp Web) do
+  // mesmo tenant — sem esse filtro, um tenant com as duas conexões faz o maybeSingle()
+  // abaixo estourar erro (mais de uma linha), e Templates parava de aparecer.
   const { data: connection, error: connectionError } = await supabaseAdmin
     .from('whatsapp_connections')
     .select('*')
     .eq('tenant_id', tenantId)
+    .eq('connection_type', 'cloud_api')
     .maybeSingle()
 
-  if (connectionError || !connection) return jsonResponse({ error: 'Nenhuma conexão de WhatsApp configurada pra esse tenant.' }, 404)
+  if (connectionError || !connection) return jsonResponse({ error: 'Nenhuma conexão de WhatsApp (Cloud API) configurada pra esse tenant.' }, 404)
 
   const token = tokenParaConexao(connection.status)
   if (!token) return jsonResponse({ error: 'Token da conexão de WhatsApp não configurado nos secrets.' }, 500)
