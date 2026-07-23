@@ -41,6 +41,25 @@ export function ProspeccaoPage() {
     enabled: Boolean(tenantId),
   })
 
+  // Fase 10b: o ícone de WhatsApp no ProspectRow só fica clicável se houver uma conexão QR
+  // conectada — evita abrir o LeadChatModal só pra ele falhar dizendo que não tem conexão.
+  const whatsappConnectionQuery = useQuery({
+    queryKey: ['whatsapp-web-connection-status', tenantId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('whatsapp_connections')
+        .select('web_status')
+        .eq('tenant_id', tenantId)
+        .eq('connection_type', 'qr_web')
+        .eq('web_status', 'connected')
+        .maybeSingle()
+      if (error) throw error
+      return Boolean(data)
+    },
+    enabled: Boolean(tenantId),
+    refetchInterval: 10000,
+  })
+
   const searchMutation = useMutation({
     mutationFn: async () => {
       // Nome real da function no Supabase ficou "super-function" (o painel web só deixou
@@ -190,7 +209,12 @@ export function ProspeccaoPage() {
       {!prospectsQuery.isLoading && (
         <ul className="flex flex-col gap-2">
           {filtered.map((prospect) => (
-            <ProspectRow key={prospect.id} tenantId={tenantId} prospect={prospect} />
+            <ProspectRow
+              key={prospect.id}
+              tenantId={tenantId}
+              prospect={prospect}
+              whatsappConnected={whatsappConnectionQuery.data ?? false}
+            />
           ))}
           {filtered.length === 0 && (
             <li className="rounded-xl border border-dashed border-border p-4 text-sm text-text-faint">

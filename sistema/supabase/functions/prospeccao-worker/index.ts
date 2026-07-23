@@ -77,9 +77,21 @@ async function buscarPlacesNaCelula(textQuery: string, cell: GridCell): Promise<
   return (data.places ?? []) as PlaceResult[]
 }
 
-async function extrairRedesSociais(websiteUri: string): Promise<{ instagram_url: string | null; linkedin_url: string | null }> {
+// Fase 10b: mesma extensão de prospeccao-buscar/index.ts (arquivo duplicado de propósito,
+// ver comentário no topo) — aproveita o fetch já feito pra Instagram/LinkedIn pra também
+// medir a "nota de qualidade" do site (prospects.quality_score, migration 0017).
+type AnaliseSite = {
+  instagram_url: string | null
+  linkedin_url: string | null
+  reachable: boolean
+  https: boolean
+  mobile_friendly: boolean
+}
+
+async function analisarSite(websiteUri: string): Promise<AnaliseSite> {
   const INSTAGRAM_REGEX = /https?:\/\/(?:www\.)?instagram\.com\/(?!explore\/|accounts\/|p\/|reel\/|stories\/)[a-zA-Z0-9_.]+/i
   const LINKEDIN_REGEX = /https?:\/\/(?:www\.)?linkedin\.com\/(?:company|in)\/[a-zA-Z0-9\-_%]+/i
+  const VIEWPORT_REGEX = /<meta[^>]+name=["']viewport["'][^>]*>/i
 
   const controller = new AbortController()
   const timeout = setTimeout(() => controller.abort(), 6000)
@@ -89,9 +101,12 @@ async function extrairRedesSociais(websiteUri: string): Promise<{ instagram_url:
     return {
       instagram_url: html.match(INSTAGRAM_REGEX)?.[0] ?? null,
       linkedin_url: html.match(LINKEDIN_REGEX)?.[0] ?? null,
+      reachable: res.ok,
+      https: res.url.startsWith('https://'),
+      mobile_friendly: VIEWPORT_REGEX.test(html),
     }
   } catch {
-    return { instagram_url: null, linkedin_url: null }
+    return { instagram_url: null, linkedin_url: null, reachable: false, https: false, mobile_friendly: false }
   } finally {
     clearTimeout(timeout)
   }
@@ -102,9 +117,9 @@ async function processarCelula(job: any, cell: GridCell) {
 
   const enriquecidos = await Promise.allSettled(
     places.map(async (place) => {
-      const redes = place.websiteUri
-        ? await extrairRedesSociais(place.websiteUri)
-        : { instagram_url: null, linkedin_url: null }
+      const analise = place.websiteUri
+        ? await analisarSite(place.websiteUri)
+        : { instagram_url: null, linkedin_url: null, reachable: false, https: false, mobile_friendly: false }
 
       return {
         tenant_id: job.tenant_id,
@@ -114,8 +129,11 @@ async function processarCelula(job: any, cell: GridCell) {
         formatted_address: place.formattedAddress ?? null,
         phone_number: place.internationalPhoneNumber ?? null,
         website: place.websiteUri ?? null,
-        instagram_url: redes.instagram_url,
-        linkedin_url: redes.linkedin_url,
+        instagram_url: analise.instagram_url,
+        linkedin_url: analise.linkedin_url,
+        site_reachable: place.websiteUri ? analise.reachable : null,
+        site_https: place.websiteUri ? analise.https : null,
+        site_mobile_friendly: place.websiteUri ? analise.mobile_friendly : null,
         google_maps_url: place.googleMapsUri ?? null,
         latitude: place.location?.latitude ?? null,
         longitude: place.location?.longitude ?? null,

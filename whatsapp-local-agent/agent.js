@@ -1,11 +1,12 @@
-// Fase 10a — agente local que segura a sessão do WhatsApp Web (não-oficial, via Baileys) e
-// reporta o estado pro dashboard através da Edge Function whatsapp-web-device. Não expõe
-// porta nenhuma pro navegador (evita o problema de mixed-content HTTPS -> localhost) -- só
-// faz fetch de saída, autenticado pelo DEVICE_TOKEN gerado no dashboard.
+// Fase 10a/10b — agente local que segura a sessão do WhatsApp Web (não-oficial, via
+// Baileys) e conversa com o dashboard através da Edge Function whatsapp-web-device. Não
+// expõe porta nenhuma pro navegador (evita o problema de mixed-content HTTPS -> localhost)
+// -- só faz fetch de saída, autenticado pelo DEVICE_TOKEN gerado no dashboard.
 //
-// v1 (Fase 10a) só cobre parear/desparear -- não manda nem recebe mensagem ainda. Fases
-// 10b/10c vão estender esse arquivo com o polling de pull-outbound (fila de saída) e o
-// listener de messages.upsert (mensagens recebidas -> push-inbound).
+// Fase 10a: parear/desparear (QR, status, heartbeat).
+// Fase 10b: drena a fila de mensagens de saída (pull-outbound) e reporta mensagens
+// recebidas (push-inbound) -- é isso que faz o chat dentro do dashboard funcionar de
+// verdade. Só texto 1:1 (sem grupo, sem mídia) no v1.
 
 import 'dotenv/config'
 import makeWASocket, { useMultiFileAuthState, DisconnectReason, fetchLatestBaileysVersion } from '@whiskeysockets/baileys'
@@ -21,6 +22,7 @@ if (!DEVICE_TOKEN || !FUNCTIONS_URL) {
 
 const DEVICE_ENDPOINT = `${FUNCTIONS_URL.replace(/\/$/, '')}/whatsapp-web-device`
 const HEARTBEAT_INTERVAL_MS = 20_000
+const OUTBOUND_POLL_INTERVAL_MS = 2_000
 
 async function chamarDevice(action, payload = {}) {
   try {
@@ -29,12 +31,41 @@ async function chamarDevice(action, payload = {}) {
       headers: { 'Content-Type': 'application/json', 'x-device-token': DEVICE_TOKEN },
       body: JSON.stringify({ action, ...payload }),
     })
+    const data = await res.json().catch(() => null)
     if (!res.ok) {
-      console.error(`[whatsapp-web-device] ${action} falhou (HTTP ${res.status}): ${await res.text()}`)
+      console.error(`[whatsapp-web-device] ${action} falhou (HTTP ${res.status}):`, data)
+      return null
     }
+    return data
   } catch (err) {
     console.error(`[whatsapp-web-device] ${action} erro de rede:`, err.message)
+    return null
   }
+}
+
+let outboundPollTimer = null
+
+function startOutboundPolling(sock) {
+  async function loop() {
+    const result = await chamarDevice('pull-outbound')
+    for (const msg of result?.messages ?? []) {
+      if (!msg.phone_number) continue
+      try {
+        const sent = await sock.sendMessage(`${msg.phone_number}@s.whatsapp.net`, { text: msg.text })
+        await chamarDevice('push-outbound-result', { message_id: msg.id, status: 'sent', whatsapp_message_id: sent?.key?.id ?? null })
+      } catch (err) {
+        console.error(`Falha ao enviar mensagem ${msg.id}:`, err.message)
+        await chamarDevice('push-outbound-result', { message_id: msg.id, status: 'failed', error: err.message })
+      }
+    }
+    outboundPollTimer = setTimeout(loop, OUTBOUND_POLL_INTERVAL_MS)
+  }
+  loop()
+}
+
+function stopOutboundPolling() {
+  if (outboundPollTimer) clearTimeout(outboundPollTimer)
+  outboundPollTimer = null
 }
 
 async function start() {
@@ -66,9 +97,11 @@ async function start() {
       const numero = sock.user?.id?.split(':')[0] ?? null
       console.log(`Conectado ao WhatsApp${numero ? ` (${numero})` : ''}.`)
       await chamarDevice('push-connected', { phone_number: numero })
+      startOutboundPolling(sock)
     }
 
     if (connection === 'close') {
+      stopOutboundPolling()
       const statusCode = lastDisconnect?.error?.output?.statusCode
       const loggedOut = statusCode === DisconnectReason.loggedOut
       await chamarDevice('push-disconnected')
@@ -78,6 +111,20 @@ async function start() {
         console.log('Conexão caiu, tentando reconectar em 3s...')
         setTimeout(start, 3000)
       }
+    }
+  })
+
+  sock.ev.on('messages.upsert', async ({ messages, type }) => {
+    if (type !== 'notify') return
+    for (const m of messages) {
+      if (m.key.fromMe) continue
+      const jid = m.key.remoteJid ?? ''
+      if (jid.endsWith('@g.us')) continue // grupos fora do escopo v1
+      const text = m.message?.conversation ?? m.message?.extendedTextMessage?.text
+      if (!text) continue // mídia/outros tipos de mensagem fora do escopo v1
+      const phoneNumber = jid.split('@')[0].replace(/\D/g, '')
+      if (!phoneNumber) continue
+      await chamarDevice('push-inbound', { phone_number: phoneNumber, text, profile_name: m.pushName ?? undefined })
     }
   })
 }

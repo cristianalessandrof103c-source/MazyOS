@@ -45,6 +45,9 @@ export type Conversation = {
   channel: 'whatsapp'
   status: 'active' | 'needs_human' | 'closed'
   window_expires_at: string | null
+  // Fase 10b — null pras conversas antigas do agente de IA (Cloud API); aponta pra
+  // whatsapp_connections quando a conversa passa pelo canal QR.
+  whatsapp_connection_id: string | null
   last_message_at: string
   created_at: string
 }
@@ -56,6 +59,10 @@ export type Message = {
   direction: 'inbound' | 'outbound'
   sender_type: 'lead' | 'agent' | 'human'
   content_text: string
+  // Fase 10b — só relevante pro canal QR: mensagens outbound nascem 'queued' até o agente
+  // local confirmar envio. Cloud API e todo inbound já nascem 'sent'.
+  status: 'queued' | 'sent' | 'failed'
+  whatsapp_message_id: string | null
   tool_calls: { name: string; input: unknown }[] | null
   created_at: string
 }
@@ -101,6 +108,12 @@ export type Prospect = {
   status: ProspectStatus
   notes: string | null
   converted_lead_id: string | null
+  // Fase 10b — nota de qualidade (0-100), ver migration 0017. null nos 3 primeiros = ainda
+  // não avaliado (prospect antigo ou sem site); quality_score é coluna gerada no banco.
+  site_reachable: boolean | null
+  site_https: boolean | null
+  site_mobile_friendly: boolean | null
+  quality_score: number
   created_at: string
 }
 
