@@ -1,9 +1,9 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { supabase } from '../../lib/supabase'
-import { Modal } from '../../components/Modal'
-import { extrairErroFuncao } from '../../lib/functions-error'
-import type { Message } from '../../lib/crm-types'
+import { supabase } from '../lib/supabase'
+import { Modal } from './Modal'
+import { extrairErroFuncao } from '../lib/functions-error'
+import type { Message } from '../lib/crm-types'
 
 // Fase 10b — chat de WhatsApp dentro do sistema, via conexão QR (whatsapp-web-send +
 // whatsapp-local-agent). Ao abrir, resolve/cria o lead + conversa por telefone (mesmo

@@ -3,7 +3,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '../../lib/supabase'
 import { extrairErroFuncao } from '../../lib/functions-error'
 import { GlobeIcon, InstagramIcon, LinkedinIcon, MapPinIcon, RefreshIcon, WhatsAppIcon } from '../../components/icons'
-import { LeadChatModal } from './LeadChatModal'
+import { LeadChatModal } from '../../components/LeadChatModal'
 import type { Prospect, ProspectStatus } from '../../lib/crm-types'
 
 const STATUS_LABEL: Record<ProspectStatus, string> = {

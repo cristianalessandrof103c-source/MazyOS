@@ -9,11 +9,12 @@ import { NewCampaignDialog } from './NewCampaignDialog'
 import { CampaignCard } from './CampaignCard'
 import { TemplatesSection } from './TemplatesSection'
 import { WhatsAppWebSection } from './WhatsAppWebSection'
+import { ConversasSection } from './ConversasSection'
 import type { BroadcastCampaign, BroadcastList } from '../../lib/broadcast-types'
 import type { Membership } from '../../lib/crm-types'
 
-// Leads/Conversas/Scripts são placeholder nesta etapa (Fase 10a só entrega a conexão QR) —
-// já aparecem na navegação pra deixar claro o que vem a seguir, ver Fase 10b/10c no plano.
+// Leads/Scripts ainda são placeholder (Fase 10c, ver plano) — Conversas foi adiantada por
+// pedido do dono logo depois da Fase 10b.
 type BroadcastTab = 'whatsapp' | 'campanhas' | 'leads' | 'conversas' | 'scripts'
 
 const BROADCAST_TABS: BroadcastTab[] = ['whatsapp', 'campanhas', 'leads', 'conversas', 'scripts']
@@ -156,10 +157,12 @@ export function BroadcastPage() {
 
       {activeTab === 'whatsapp' && <WhatsAppWebSection tenantId={tenantId} isTenantAdmin={isTenantAdmin} />}
 
-      {(activeTab === 'leads' || activeTab === 'conversas' || activeTab === 'scripts') && (
+      {activeTab === 'conversas' && <ConversasSection tenantId={tenantId} />}
+
+      {(activeTab === 'leads' || activeTab === 'scripts') && (
         <p className="mt-6 max-w-xl rounded-xl border border-dashed border-border p-4 text-sm text-text-faint">
-          {TAB_LABEL[activeTab]} chega na próxima etapa desta feature (lista unificada de leads,
-          conversas e respostas rápidas) — por enquanto, conecte o WhatsApp na aba "WhatsApp" acima.
+          {TAB_LABEL[activeTab]} chega na próxima etapa desta feature — por enquanto, use a
+          Prospecção (ícone de WhatsApp) ou a aba Conversas aqui em Disparos pra conversar.
         </p>
       )}
 
