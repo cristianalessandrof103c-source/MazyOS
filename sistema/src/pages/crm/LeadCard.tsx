@@ -1,37 +1,38 @@
-import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { supabase } from '../../lib/supabase'
+import { useState } from 'react'
 import type { AcquisitionChannel, Lead, PipelineStage } from '../../lib/crm-types'
 
 export function LeadCard({
-  tenantId,
   lead,
   stages,
   channel,
+  onMove,
   onRegisterSale,
   onOpenConversation,
 }: {
-  tenantId: string
   lead: Lead
   stages: PipelineStage[]
   channel: AcquisitionChannel | undefined
+  onMove: (stageId: string) => void
   onRegisterSale: () => void
   onOpenConversation: () => void
 }) {
-  const queryClient = useQueryClient()
+  const [isDragging, setIsDragging] = useState(false)
   const currentStage = stages.find((s) => s.id === lead.stage_id)
-
-  const moveMutation = useMutation({
-    mutationFn: async (stageId: string) => {
-      const { error } = await supabase.from('leads').update({ stage_id: stageId }).eq('id', lead.id)
-      if (error) throw error
-    },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['leads', tenantId] }),
-  })
-
   const canRegisterSale = currentStage?.category === 'new' || currentStage?.category === 'in_progress'
 
   return (
-    <li className="card-hover rounded-xl border border-border bg-surface-2 p-3 shadow-sm">
+    <li
+      draggable
+      onDragStart={(e) => {
+        e.dataTransfer.setData('text/plain', lead.id)
+        e.dataTransfer.effectAllowed = 'move'
+        setIsDragging(true)
+      }}
+      onDragEnd={() => setIsDragging(false)}
+      className={`card-hover cursor-grab rounded-xl border border-border bg-surface-2 p-3 shadow-sm active:cursor-grabbing ${
+        isDragging ? 'opacity-40' : ''
+      }`}
+    >
       <p className="font-medium">{lead.full_name}</p>
       <p className="mt-0.5 text-xs text-text-faint">
         {lead.phone_number || lead.email || 'sem contato'} · {channel?.label ?? 'canal desconhecido'}
@@ -40,7 +41,7 @@ export function LeadCard({
       <div className="mt-3 flex items-center gap-2">
         <select
           value={lead.stage_id}
-          onChange={(e) => moveMutation.mutate(e.target.value)}
+          onChange={(e) => onMove(e.target.value)}
           className="flex-1 rounded-lg border border-border bg-bg px-2 py-1 text-xs text-text-dim outline-none"
         >
           {stages.map((s) => (

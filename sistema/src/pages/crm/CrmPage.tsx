@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useParams } from 'react-router-dom'
-import { useQuery } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '../../lib/supabase'
 import { TenantSidebarLayout } from '../../components/TenantSidebarLayout'
 import { NewLeadDialog } from './NewLeadDialog'
@@ -11,9 +11,12 @@ import type { AcquisitionChannel, Lead, PipelineStage } from '../../lib/crm-type
 
 export function CrmPage() {
   const { tenantId } = useParams<{ tenantId: string }>()
+  const queryClient = useQueryClient()
   const [showNewLead, setShowNewLead] = useState(false)
   const [dealLead, setDealLead] = useState<Lead | null>(null)
+  const [dealOutcome, setDealOutcome] = useState<'won' | 'lost'>('won')
   const [conversationLead, setConversationLead] = useState<Lead | null>(null)
+  const [dragOverStageId, setDragOverStageId] = useState<string | null>(null)
 
   const stagesQuery = useQuery({
     queryKey: ['pipeline-stages', tenantId],
@@ -54,6 +57,14 @@ export function CrmPage() {
     enabled: Boolean(tenantId),
   })
 
+  const moveMutation = useMutation({
+    mutationFn: async ({ leadId, stageId }: { leadId: string; stageId: string }) => {
+      const { error } = await supabase.from('leads').update({ stage_id: stageId }).eq('id', leadId)
+      if (error) throw error
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['leads', tenantId] }),
+  })
+
   if (!tenantId) return null
 
   const stages = stagesQuery.data ?? []
@@ -65,6 +76,19 @@ export function CrmPage() {
   const lostStage = stages.find((s) => s.category === 'lost')
 
   const loading = stagesQuery.isLoading || channelsQuery.isLoading || leadsQuery.isLoading
+
+  // Arrastar (ou trocar pelo select) pra uma coluna Ganha/Perdida abre o mesmo formulário do
+  // botão "Registrar venda" em vez de mover direto -- senão a receita/CAC do Financeiro nunca
+  // seria registrada pra esse lead.
+  function handleMoveLead(lead: Lead, targetStage: PipelineStage) {
+    if (targetStage.id === lead.stage_id) return
+    if (targetStage.category === 'won' || targetStage.category === 'lost') {
+      setDealOutcome(targetStage.category)
+      setDealLead(lead)
+      return
+    }
+    moveMutation.mutate({ leadId: lead.id, stageId: targetStage.id })
+  }
 
   return (
     <TenantSidebarLayout tenantId={tenantId}>
@@ -87,20 +111,43 @@ export function CrmPage() {
           {stages.map((stage) => {
             const stageLeads = leads.filter((l) => l.stage_id === stage.id)
             return (
-              <div key={stage.id} className="w-72 flex-shrink-0">
-                <div className="mb-3 flex items-center justify-between">
+              <div
+                key={stage.id}
+                onDragOver={(e) => {
+                  e.preventDefault()
+                  setDragOverStageId(stage.id)
+                }}
+                onDragLeave={() => setDragOverStageId((current) => (current === stage.id ? null : current))}
+                onDrop={(e) => {
+                  e.preventDefault()
+                  setDragOverStageId(null)
+                  const leadId = e.dataTransfer.getData('text/plain')
+                  const lead = leads.find((l) => l.id === leadId)
+                  if (lead) handleMoveLead(lead, stage)
+                }}
+                className={`w-72 flex-shrink-0 rounded-xl transition-colors ${
+                  dragOverStageId === stage.id ? 'bg-violet/5 outline-dashed outline-2 outline-violet/50' : ''
+                }`}
+              >
+                <div className="mb-3 flex items-center justify-between px-1">
                   <h2 className="text-sm font-medium text-text-dim">{stage.name}</h2>
                   <span className="text-xs text-text-faint">{stageLeads.length}</span>
                 </div>
-                <ul className="flex flex-col gap-2">
+                <ul className="flex min-h-8 flex-col gap-2 p-1">
                   {stageLeads.map((lead) => (
                     <LeadCard
                       key={lead.id}
-                      tenantId={tenantId}
                       lead={lead}
                       stages={stages}
                       channel={channels.find((c) => c.id === lead.acquisition_channel_id)}
-                      onRegisterSale={() => setDealLead(lead)}
+                      onMove={(stageId) => {
+                        const targetStage = stages.find((s) => s.id === stageId)
+                        if (targetStage) handleMoveLead(lead, targetStage)
+                      }}
+                      onRegisterSale={() => {
+                        setDealOutcome('won')
+                        setDealLead(lead)
+                      }}
                       onOpenConversation={() => setConversationLead(lead)}
                     />
                   ))}
@@ -131,6 +178,7 @@ export function CrmPage() {
           lead={dealLead}
           wonStage={wonStage}
           lostStage={lostStage}
+          initialOutcome={dealOutcome}
           onClose={() => setDealLead(null)}
         />
       )}

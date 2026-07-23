@@ -10,16 +10,18 @@ export function CloseDealDialog({
   lead,
   wonStage,
   lostStage,
+  initialOutcome = 'won',
   onClose,
 }: {
   tenantId: string
   lead: Lead
   wonStage: PipelineStage
   lostStage: PipelineStage
+  initialOutcome?: 'won' | 'lost'
   onClose: () => void
 }) {
   const queryClient = useQueryClient()
-  const [outcome, setOutcome] = useState<'won' | 'lost'>('won')
+  const [outcome, setOutcome] = useState<'won' | 'lost'>(initialOutcome)
   const [valueReais, setValueReais] = useState('')
   const [paidNow, setPaidNow] = useState(true)
   const [error, setError] = useState<string | null>(null)
